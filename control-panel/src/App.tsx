@@ -40,13 +40,33 @@ function App() {
   const [tempReading, setTempReading] = useState({ temp: "67", humidity: "57", heat_index: "66" });
   const [GPSReading, setGPSReading] = useState({ lat: "29.650789", long: "-82.346568", alt: "nan", speed: "nan" });
 
- 
-
   const [parkMode, setParkMode] = useState(false);
   const [autoLightMode, setAutoLightMode] = useState(false);
   const [lightMode, setLightMode] = useState(false);
   const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null);
 
+  const [userLoc, setUserLoc] = useState<{ lat: number; long: number } | null>(null);
+
+  useEffect (() => {
+    const intervalId = setInterval(() => { 
+      setUserLoc(Map.getUserLoc());
+    // const intervalId = setInterval(() => { 
+    //   if (navigator.geolocation){
+    //     try {
+    //       navigator.geolocation.getCurrentPosition(
+    //         position => {
+    //           setUserLoc({'lat': position.coords.latitude, 'long': position.coords.longitude});
+    //         }
+    //       )
+    //     } catch (error){
+    //       console.log(`unable to get user location. error: ${error} `);
+    //     }
+    //   } else {
+    //     console.log(`geolocation is not supported`);
+    //   }
+    }, 10000)
+    return () => clearInterval(intervalId);
+  }, [])
 
   // // get all values when init
   // useEffect(() => {
@@ -142,6 +162,9 @@ function App() {
   return (
     <body className="App" style={{background: 'linear-gradient(to bottom, #3b1f5b, #192841)', color: 'rgb(230, 230, 230)'}}>
       <h2>hamburger menu maybe</h2>
+
+      {JSON.stringify(userLoc)}
+
         {/* <div className="py-2">
         <label className="relative inline-flex items-center mb-5 cursor-pointer">
           Lights 
@@ -150,7 +173,7 @@ function App() {
         </div> */}
 
 
-        <div style={{ borderRadius: '10px', width: '60vw', height: '10vw',  backgroundColor: 'rgba(161, 128, 196, 0.5)', display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', textAlign: 'center', alignItems: 'center' }}>
+        <div style={{ borderRadius: '10px', width: '60vw', height: '10vw',  backgroundColor: 'rgba(161, 128, 196, 0.2)', display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', textAlign: 'center', alignItems: 'center' }}>
           <span style={{ fontSize: '5vw' }}>
             Feels like {tempReading?.heat_index}&deg;F
           </span>
@@ -164,7 +187,7 @@ function App() {
           justifyContent: 'space-evenly',
           width: '100%'
         }}>
-          <div style={{ borderRadius: '10px', width: '40vw', height: '32vw', backgroundColor: 'rgba(161, 128, 196, 0.5)'}}>
+          <div style={{ borderRadius: '10px', width: '40vw', height: '32vw', backgroundColor: 'rgba(161, 128, 196, 0.2)'}}>
             <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
               <ThermoIcon sx={{ fontSize: '8vw', color: 'primary', marginTop: '.2vw', marginRight: '-1.6vw', marginLeft: '-1vw' }} />
               <span style={{ marginLeft: '-2.2vw', fontSize: '5vw' }}>Temperature<br/></span>
@@ -173,7 +196,7 @@ function App() {
             <span style={{ fontSize: '8vw' }}><br/>{tempReading?.temp}&deg;F</span>
           </div>
           
-          <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',   backgroundColor: 'rgba(161, 128, 196, 0.5)' }}>
+          <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',   backgroundColor: 'rgba(161, 128, 196, 0.2)' }}>
             <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
                 <WaterIcon sx={{ fontSize: '8vw', color: 'primary', marginRight: '-1.6vw', marginLeft: '-1.6vw' }} />
                 <span style={{ fontSize: '5vw', marginLeft: '-2.2vw' }}>Humidity<br/></span>
@@ -191,7 +214,7 @@ function App() {
           width: '100%'
         }}>
 
-        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw', backgroundColor: 'rgba(161, 128, 196, 0.5)' }}>
+        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw', backgroundColor: 'rgba(161, 128, 196, 0.2)' }}>
           <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
             <AltitudeIcon sx={{ fontSize: '8vw', color: 'primary' }} />
             <span style={{ fontSize: '5vw', marginRight: '6vw' }}>Altitude</span>
@@ -204,7 +227,7 @@ function App() {
               )} 
         </div>
           
-        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',  backgroundColor: 'rgba(161, 128, 196, 0.5)' }}>
+        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',  backgroundColor: 'rgba(161, 128, 196, 0.2)' }}>
           <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
             <SpeedIcon sx={{ fontSize: '8vw', color: 'primary' }} />
             <span style={{ fontSize: '5vw', marginRight: '6.4vw' }}>Speed</span>
@@ -226,7 +249,7 @@ function App() {
           width: '100%'
       }}>
 
-        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw', backgroundColor: 'rgba(161, 128, 196, 0.5)' }}>
+        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw', backgroundColor: 'rgba(161, 128, 196, 0.2)' }}>
           {/* this div (below) lets us align vertically */}
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', textAlign: 'center', alignItems: 'center', height: '100%' }}>
             <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
@@ -259,7 +282,7 @@ function App() {
           </div>
         </div>
         
-        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',  backgroundColor: 'rgba(161, 128, 196, 0.5)' }}>
+        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',  backgroundColor: 'rgba(161, 128, 196, 0.2)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', textAlign: 'center', alignItems: 'center', height: '100%' }}>
             <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly' }}><span style={{ fontSize: '5vw' }}>Manual Lights</span></div>
             <Button onClick={handleClick("lightMode")}>
@@ -274,7 +297,7 @@ function App() {
       </div>
 
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', marginTop: '1vw', borderRadius: '10px', width: '86.1vw', height: '120vw',  backgroundColor: 'rgba(161, 128, 196, 0.5)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', marginTop: '1vw', borderRadius: '10px', width: '86.1vw', height: '120vw',  backgroundColor: 'rgba(161, 128, 196, 0.2)' }}>
 
 
         <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly' }}>
@@ -307,7 +330,7 @@ function App() {
           </Button>
           
           <div style={{width: '95%' }}>
-            <Map lat={GPSReading?.lat} long={GPSReading?.long} />
+            <Map.Map vehicle={GPSReading} />
           </div>
       </div>
     </body>

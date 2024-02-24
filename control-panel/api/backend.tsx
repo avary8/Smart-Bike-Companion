@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 export default axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_SERVER_HOST + import.meta.env.VITE_BACKEND_SERVER_API_PATH
+  baseURL: import.env.VITE_BACKEND_SERVER_HOST + import.meta.env.VITE_BACKEND_SERVER_API_PATH
 });
 
 // export const axiosPrivate = axios.create({

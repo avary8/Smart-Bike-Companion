@@ -33,6 +33,8 @@ lat + long : [
 ]
 
 
+
+
 consider adding time to payload that tells when value was gotten
 then you can also have a refresh button that allows ppl to call sensor data
     otherwise it just gets the last data in database

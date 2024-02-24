@@ -27,6 +27,14 @@ const vehiclesSchema = new Schema({
         type: Boolean,
         default: false
     },
+    parkedLocation: {
+        latitude: {
+            type: String
+        },
+        longitude: {
+            type: String
+        }
+    },
     location: {
         latitude: {
             type: String
@@ -44,6 +52,14 @@ const vehiclesSchema = new Schema({
     temperature: {
         type: Number
     },
+    temperatureHistory: [{
+        time: {
+            type: Date,
+        },
+        value: {
+            type: Number
+        }
+    }],
     humidity: {
         type: Number
     },
@@ -57,19 +73,6 @@ const vehiclesSchema = new Schema({
 });
 
 
-// temperature: {
-//     current: {
-//         type: Number
-//     },
-//     history: [{
-//         time: {
-//             type: Date,
-//             default: Date.now
-//         },
-//         value: {
-//             type: Number
-//         }
-//     }]
-// }
+
 
 module.exports = mongoose.model('Vehicles', vehiclesSchema);

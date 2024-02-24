@@ -18,7 +18,7 @@ const SunCalc = require('suncalc');
 */
 
 //---------------------------------private functions
-const getValues = async (doc, res) => {
+const getValues = async (doc) => {
     if (!doc?.type){
         return Error({'errMsg': 'Websocket missing type'});
     }
@@ -45,7 +45,7 @@ const changeLight = async (req, res, value) => {
 const getLightSensor = async (req, res) => {
     try {
         const result = await wsController.handleInteraction(req.ws, 'cmd', 'getPhoto');
-        return await getValues(result, res);
+        return await getValues(result);
     } catch (error) {
         console.error('Websocket incoming messages failed:', error);
         throw error;
@@ -56,7 +56,7 @@ const getLightSensor = async (req, res) => {
 const getGPSreadings = async (req, res) => {
     try {
         const result = await wsController.handleInteraction(req.ws, 'cmd', 'getGPS');
-        return await getValues(result, res);
+        return await getValues(result);
     } catch (error) {
         console.error('Websocket incoming messages failed:', error);
         throw error;
@@ -94,7 +94,7 @@ const getAll = async (req, res) => {
         } catch (error){
             return res.status(400).json({'errCode':'-', 'errMsg': error?.message || 'Error retrieving Vehicle'});
         }
-        const vals = await getValues(result, res);
+        const vals = await getValues(result);
         vals['lightMode'] = vehicle.lightMode;
         vals['parkMode'] = vehicle.parkMode;
         vals['autoMode'] = vehicle.autoMode;
@@ -140,7 +140,7 @@ const getAll = async (req, res) => {
 const getTempSensor = async (req, res) => {
     try {
         const result = await wsController.handleInteraction(req.ws, 'cmd', 'getTemp');
-        const vals = await getValues(result, res);
+        const vals = await getValues(result);
         return res.status(200).json({ 'errCode': '0', payload: vals });
     } catch (error) {
         console.error('Websocket incoming messages failed:', error);

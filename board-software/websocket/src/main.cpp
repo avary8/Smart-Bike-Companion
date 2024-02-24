@@ -268,6 +268,34 @@ void handleMsg(uint8_t* payload){
   return;
 }
 
+std::string getGPS(){
+  std:: string gpsVals = "\"gpsReading\":{";
+
+  if (Serial2.available()){
+    gps.encode(Serial2.read());
+    if (gps.location.isValid()){
+      gpsVals += "\"lat\":\"" + std::to_string(gps.location.lat()) + "\",\"long\":\"" + std::to_string(gps.location.lng()) + "\",";
+      Serial.println(gpsVals.c_str());
+    } else {
+      gpsVals += "\"lat\":\"nan\",\"long\":\"nan\",";
+    }
+    if (gps.altitude.isValid()){
+      gpsVals += "\"alt\":\"" + std::to_string(gps.altitude.feet()) + "\",";
+      Serial.println(gpsVals.c_str());
+    } else {
+      gpsVals += "\"alt\":\"nan\",";
+    }
+            
+    if (gps.speed.isValid()) {
+      gpsVals += "\"speed\":\"" + std::to_string(int(gps.speed.mph())) + "\"}";
+      Serial.println(gpsVals.c_str());
+    } else {
+      gpsVals += "\"speed\":\"nan\"}";
+    }
+  } 
+  return gpsVals;
+}
+
 
 void onWSEvent(WStype_t type, uint8_t* payload, size_t length){
   Serial.println("in switcher");
@@ -339,7 +367,7 @@ void loop() {
     sprintf(msg, "{\"action\":\"msg\",\"type\":\"bright\",\"device\":\"%" PRIu64 "\"}", chipId);
     wsClient.sendTXT(msg);
   }
-
+  std::string gpsVals = getGPS();
 
   wsClient.loop();
 }
