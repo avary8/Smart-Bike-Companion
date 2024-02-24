@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { float } = require('webidl-conversions');
 const Schema = mongoose.Schema;
 
 const vehiclesSchema = new Schema({
@@ -22,18 +23,31 @@ const vehiclesSchema = new Schema({
         type: Boolean,
         default: false
     },
+    parkMode: {
+        type: Boolean,
+        default: false
+    },
     location: {
         latitude: {
             type: String
         },
         longitude: {
             type: String
+        }, 
+        altitude: {
+            type: String
+        },
+        speed: {
+            type: Number
         }
     },
     temperature: {
         type: Number
     },
     humidity: {
+        type: Number
+    },
+    heatIndex: {
         type: Number
     },
     createdAt: {

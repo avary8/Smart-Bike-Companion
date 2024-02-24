@@ -1,0 +1,20 @@
+getLightSensor works
+
+
+getTemperature does not works:
+            in temp
+            after read humidity
+            after read temp
+            before Hif
+            after hif
+            WS Message: {"message": "Forbidden",    "connectionId":"TksoscSsoAMCKFA=", "requestId":"TktcPG_zoAMFsew="}
+            before contains type
+
+
+getGPS does not works: WS disconnects on esp32 end and then connects
+
+
+ITS WORKING. so many hours to get that going omg
+
+do NOT pass strings into the sprintf thing. gotta convert strings using val.c_str()
+

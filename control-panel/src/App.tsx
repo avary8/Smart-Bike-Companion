@@ -9,8 +9,20 @@ import LightsOffIcon from '@mui/icons-material/Brightness1';
 import LightsOnIcon from '@mui/icons-material/LightMode';
 import Button from '@mui/material/Button';
 import Map from "./Map";
+import ThermoIcon from '@mui/icons-material/Thermostat';
+import WaterIcon from '@mui/icons-material/Water';
+import AltitudeIcon from '@mui/icons-material/Terrain';
+import SpeedIcon from '@mui/icons-material/Speed';
+import InfoIcon from '@mui/icons-material/Info';
+import MapIcon from '@mui/icons-material/Map';
+import Popover from '@mui/material/Popover';
+import Typography from '@mui/material/Typography';
+import ReloadIcon from '@mui/icons-material/Cached';
 
-import { axios } from '../api/backend';
+// import axios from '../api/backend.js';
+import axios from 'axios';
+import { light } from '@mui/material/styles/createPalette';
+import React from 'react';
 
 type MessageBody = {
   action: string
@@ -19,274 +31,289 @@ type MessageBody = {
   body: unknown
 };
 
-const lightSensor = 34 as number;
-const tempSensor = 35 as number;
-const outputPins = [32];//, 33, 25, 26];
-const defaultOutputPin = outputPins[0];
+const tempID = '189922615539556';
+const Route = "http://localhost:3500"
 
 function App() {
-  const { readyState, lastMessage, sendMessage, sendJsonMessage } = useWebSocket(import.meta.env.VITE_WEBSOCKET_ADDRESS);
+  // const { readyState, lastMessage, sendMessage, sendJsonMessage } = useWebSocket(import.meta.env.VITE_WEBSOCKET_ADDRESS);
+
+  const [tempReading, setTempReading] = useState({ temp: "67", humidity: "57", heat_index: "66" });
+  const [GPSReading, setGPSReading] = useState({ lat: "29.650789", long: "-82.346568", alt: "nan", speed: "nan" });
+
+ 
+
+  const [parkMode, setParkMode] = useState(false);
+  const [autoLightMode, setAutoLightMode] = useState(false);
+  const [lightMode, setLightMode] = useState(false);
+  const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null);
 
 
-  const [selectedPin, setSelectedPin] = useState(defaultOutputPin);
-  const [pinVal, setPinVal] = useState(false);
-  const [lightReading, setLightReading] = useState(0);
-  const [tempReading, setTempReading] = useState(0.0);
-  const [GPSReading, setGPSReading] = useState({});
-  const [parkVal, setparkVal] = useState(false);
-  const [autoLightVal, setAutoLightVal] = useState(false);
-  const [lightVal, setLightVal] = useState(false);
-
-  useEffect(() => {
-    if (lastMessage === null){
-      return;
-    }
-
-    const parsedMsg = JSON.parse(lastMessage.data) as MessageBody;
-
-    console.log(parsedMsg);
-
-    if (parsedMsg.action !== "msg"){
-      return
-    }
-
-    if (parsedMsg.type === "error"){
-      console.log(parsedMsg.body);
-      setGPSReading(parsedMsg);
-    }
-
-    if (parsedMsg.type === "output") {
-      const body = parsedMsg.body as number;
-      const pin = parseInt(parsedMsg.pin, 10);
-
-      if (pin === lightSensor){
-        setLightReading(body);
-      } else if (pin === tempSensor){
-        setTempReading((body*3300.0 / 1024.0 - 500) / 10.0);
-      } else {
-        setPinVal(body === 0 ? false : true);
-      }
-    }
-  }, [lastMessage, setPinVal])
-
-
-  useEffect(() => {
-    outputPins.forEach((pin) => {
-      sendJsonMessage({
-        action: "msg",
-        type: "cmd",
-        body: {
-          type: "pinMode",
-          pin,
-          mode: "output"
-        }
-      });
-
-      console.log (JSON.stringify({
-        action: "msg",
-        type: "cmd",
-        body: {
-          type: "pinMode",
-          pin,
-          mode: "output"
-        }
-      }))
-
-    });
-
-    // sendJsonMessage({
-    //   action: "msg",
-    //   type: "cmd",
-    //   body: {
-    //     type: "digitalRead",
-    //     pin: defaultOutputPin
-    //   }
-    // });
-  }, []);
-
-
-  //uncomment when needed. this updates the light sensor value every x seconds
+  // // get all values when init
   // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     sendJsonMessage({
-  //       action: "msg", 
-  //       type: "cmd",
-  //       body: {
-  //         type: "analogRead",
-  //         pin: lightSensor,
-  //       }
-  //     });
-
-  //     sendJsonMessage({
-  //       action: "msg", 
-  //       type: "cmd",
-  //       body: {
-  //         type: "analogRead",
-  //         pin: tempSensor,
-  //       }
-  //     });
-
-  //     sendJsonMessage({
-  //       action: "msg", 
-  //       type: "cmd",
-  //       body: {
-  //         type: "getGPS"
-  //       }
-  //     });
+  //   getSensorReading('getAll');
+  // }, []);
 
 
-  //   }, 30000); // every 30 seconds
+  // uncomment when needed. this updates the light sensor value every x seconds
+  // useEffect(() => {
+  //   const interval = setInterval(async () => {
+  //     getSensorReading('TempReading');
+  //   }, 1800000); // every 30 minutes
+  //   return () => clearInterval(interval);
+  // }, []);
+
+  // useEffect(() => {
+  //   const interval = setInterval(async () => {
+  //     getSensorReading('gpsReading');
+  //   }, 180000); // every 3 minutes
   //   return () => clearInterval(interval);
   // }, []);
 
 
-
-  const handleParkClick = () => {
-    // save current vehicle lat and long
-    // turn on/off monitoring 
-    console.log("location saved (hypothetically");
-    setparkVal(!parkVal);
+  const getSensorReading = async (route: string) => {
+    try {
+      const response = await axios.get(`${Route}/data/${route}/${tempID}`);
+      if (response?.data?.payload !== undefined){
+        setSensorReading(route, response.data.payload);
+      }
+    } catch (error: any){
+      console.error(`Error getting ${Route}/${route}/${tempID} sensor data: `, error?.response?.data?.errMsg || error.message);
+    }
   }
 
-  const handleAutoLightClick = () => {
-    // change auto light val
-    console.log("auto lights (hypothetically");
-    setAutoLightVal(!autoLightVal);
-  }
+  const setSensorReading = (async (path: string, payload: any) => {
+    switch(path){
+      case 'autoMode':
+        setAutoLightMode(payload);
+        break;
+      case 'lightMode':
+        setLightMode(payload);
+        break;
+      case 'parkMode':
+        setParkMode(payload);
+        break;
+      case 'tempReading':
+        setTempReading(payload);
+        break;
+      case 'gpsReading':
+        setGPSReading(payload);
+        break;
+      case 'getAll':
+        Object.entries(payload).forEach(([key, value]) => {
+          console.log(key, value);
+          setSensorReading(key, value);
+        });
+        break;
+    }
+  });
 
-  const handleLightClick = () => {
-    // turn lights on/off 
-    console.log("lights (hypothetically");
-    setLightVal(!lightVal);
-  }
+
+  const handleModeUpdate = (async (route: string) => {
+    try {
+      if (route === 'autoMode' || route === 'lightMode' || route === 'parkMode'){
+        const response = await axios.put(`${Route}/data/${route}/${tempID}`);
+        console.log(response.data);
+        if (response?.data?.payload !== true || response?.data?.payload !== false){
+          console.log("in payload check")
+          await setSensorReading(route, response.data.payload);
+        }
+      } 
+    } catch (error: any){
+      console.error(`Error updating ${Route}/${route}/${tempID} sensor data: `, error?.response?.data?.errMsg || error.message);
+    }
+  });
+
+
+  const handleClick = (route: string) => async() => {
+    await handleModeUpdate(route);
+  };
+
+  const handleInfoOpen = ((event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  });
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+  const open = Boolean(anchorEl);
+  const id = open ? 'simple-popover' : undefined;
 
 
   return (
-    <body className="App">
-      <h1>ESP32 Control Panel</h1>
-      {/* <div className="py-2">
+    <body className="App" style={{background: 'linear-gradient(to bottom, #3b1f5b, #192841)', color: 'rgb(230, 230, 230)'}}>
+      <h2>hamburger menu maybe</h2>
+        {/* <div className="py-2">
         <label className="relative inline-flex items-center mb-5 cursor-pointer">
           Lights 
           <Switch/>
         </label>
-      </div> */}
+        </div> */}
 
-      <div>
-        <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Select a pin</label>
-        <select 
-          value={selectedPin}
-          onChange={(e) => {
-            const newPin = parseInt(e.target.value, 10);
-            setSelectedPin(newPin);
-            sendJsonMessage({
-              action: "msg",
-              type: "cmd",
-              body: {
-                type: "digitalRead",
-                pin: newPin
-              }
-            });
-          }}
-          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-          {outputPins.map((pin) => <option value={pin}>GPIO{pin}</option>)}
-        </select>
-      </div>
-      <div className="py-2">
-        <label className="relative inline-flex items-center mb-5 cursor-pointer">
-          <input type="checkbox" 
-            checked={pinVal}
-            onChange={() => {
-              const newVal = !pinVal;
-              setPinVal(newVal);
-              sendJsonMessage({
-                action: "msg", 
-                type: "cmd",
-                body: {
-                  type: "digitalWrite",
-                  pin: selectedPin,
-                  value: newVal ? 1 : 0
-                }
-              })
-            }}
-            className="sr-only peer"/>
-          <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-8 rtl:peer-checked:after:-translate-x-7 peer-checked:after:border-white after:content-[''] after:left-0 after:absolute after:top-0.5 after:start-[0px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-          <span className="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300">
-              {pinVal ? "on" : "off"}
+
+        <div style={{ borderRadius: '10px', width: '60vw', height: '10vw',  backgroundColor: 'rgba(161, 128, 196, 0.5)', display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', textAlign: 'center', alignItems: 'center' }}>
+          <span style={{ fontSize: '5vw' }}>
+            Feels like {tempReading?.heat_index}&deg;F
           </span>
-        </label>
-      </div>
+        </div>
 
 
-      <h2>Light Sensor Reading</h2>
-      <div>
-        {lightReading}
-      </div>
+        <div style={{
+          marginTop: '1vw',
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'space-evenly',
+          width: '100%'
+        }}>
+          <div style={{ borderRadius: '10px', width: '40vw', height: '32vw', backgroundColor: 'rgba(161, 128, 196, 0.5)'}}>
+            <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
+              <ThermoIcon sx={{ fontSize: '8vw', color: 'primary', marginTop: '.2vw', marginRight: '-1.6vw', marginLeft: '-1vw' }} />
+              <span style={{ marginLeft: '-2.2vw', fontSize: '5vw' }}>Temperature<br/></span>
+            </div>
+            
+            <span style={{ fontSize: '8vw' }}><br/>{tempReading?.temp}&deg;F</span>
+          </div>
+          
+          <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',   backgroundColor: 'rgba(161, 128, 196, 0.5)' }}>
+            <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
+                <WaterIcon sx={{ fontSize: '8vw', color: 'primary', marginRight: '-1.6vw', marginLeft: '-1.6vw' }} />
+                <span style={{ fontSize: '5vw', marginLeft: '-2.2vw' }}>Humidity<br/></span>
+            </div>
+            <span style={{ fontSize: '8vw' }}><br/>{tempReading?.humidity}%</span>
+          </div>
+        </div>
+    
 
-      <h2>Temperature Sensor Reading</h2>
-      <div>
-        {tempReading}
-      </div>
-
-      <h2>GPS Reading</h2>
-      <div>
-        {JSON.stringify(GPSReading)}
-      </div>
-
-
-
-      <h2>Light Control</h2>
       <div style={{
-        'display': 'flex',
-        'flexDirection': 'row',
-        'justifyContent': 'space-evenly',
-        'width': '100%'
+          marginTop: '1vw',
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'space-evenly',
+          width: '100%'
+        }}>
+
+        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw', backgroundColor: 'rgba(161, 128, 196, 0.5)' }}>
+          <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
+            <AltitudeIcon sx={{ fontSize: '8vw', color: 'primary' }} />
+            <span style={{ fontSize: '5vw', marginRight: '6vw' }}>Altitude</span>
+          </div>
+          {GPSReading?.alt ==='nan' ? 
+              (
+                <span style={{ fontSize: '4vw' }}><br/>Not available at the moment</span>
+              ) : (
+                <span style={{ fontSize: '8vw' }}><br/>GPSReading?.alt </span>
+              )} 
+        </div>
+          
+        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',  backgroundColor: 'rgba(161, 128, 196, 0.5)' }}>
+          <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
+            <SpeedIcon sx={{ fontSize: '8vw', color: 'primary' }} />
+            <span style={{ fontSize: '5vw', marginRight: '6.4vw' }}>Speed</span>
+          </div>
+            {GPSReading?.speed ==='nan' ? 
+              (
+                <span style={{ fontSize: '4vw' }}><br/>Not available at the moment</span>
+              ) : (
+                <span style={{ fontSize: '8vw' }}><br/>GPSReading?.speed </span>
+              )} 
+        </div>
+      </div>
+      
+      <div style={{
+          marginTop: '1vw',
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'space-evenly',
+          width: '100%'
       }}>
 
-        <div style={{
-          'display': 'flex',
-          'flexDirection': 'column'
-        }}>
-          <div>Auto Light</div>
-          <Button onClick={handleAutoLightClick}>
-          {autoLightVal ? (
-            <AutoLightIcon fontSize='large' sx={{ color: 'primary' }} />
-          ) : (
-            <AutoLightIcon fontSize='large' sx={{ color: 'gray' }} />
-          )}
-          </Button>
-        </div>
+        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw', backgroundColor: 'rgba(161, 128, 196, 0.5)' }}>
+          {/* this div (below) lets us align vertically */}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', textAlign: 'center', alignItems: 'center', height: '100%' }}>
+            <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
+              <span style={{ fontSize: '5vw', marginLeft: '6vw' }}>Auto Lights</span>
+              <Button aria-describedby={id} onClick={handleInfoOpen}
+                style={{ height: '3vw', width: '3vw', padding: '0px', borderWidth: '0px', margin: '0px', minWidth: 'unset', minHeight: 'unset', marginLeft: '3.5vw', color: 'rgb(230, 230, 230)' }}>
+                <InfoIcon sx={{ fontSize: '4vw', color: 'primary', marginTop: '-1.4vw' }}/>
+              </Button>
+              <Popover
+                id={id}
+                open={open}
+                anchorEl={anchorEl}
+                onClose={handleClose}
+                anchorOrigin={{
+                  vertical: 'top',
+                  horizontal: 'left',
+                }}
+              >
+                <Typography sx={{ p: 2, backgroundColor: 'rgba(33, 31, 91, 0.5)', color: 'rgb(30, 30, 30)', fontSize: '4vw' }}>Automatically detects when to turn lights on</Typography>
+              </Popover>
+            </div>
 
-        <div style={{
-          'display': 'flex',
-          'flexDirection': 'column'
-        }}>
-          <div>Lights</div>
-          <Button onClick={handleLightClick}>
-          {lightVal ? (
-            <LightsOnIcon fontSize='large' sx={{ color: 'yellow' }} />
-          ) : (
-            <LightsOffIcon fontSize='large' sx={{ color: 'gray' }} />
-          )}
-          </Button>
+            <Button onClick={handleClick("autoMode")}>
+              {autoLightMode ? (
+                <AutoLightIcon sx={{ fontSize: '20vw', color: 'primary' }} />
+              ) : (
+                <AutoLightIcon sx={{ fontSize: '20vw', color: 'rgb(176, 176, 176)' }} />
+              )}
+            </Button>
+          </div>
         </div>
-
+        
+        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',  backgroundColor: 'rgba(161, 128, 196, 0.5)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', textAlign: 'center', alignItems: 'center', height: '100%' }}>
+            <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly' }}><span style={{ fontSize: '5vw' }}>Manual Lights</span></div>
+            <Button onClick={handleClick("lightMode")}>
+              {lightMode ? (
+                <LightsOnIcon sx={{ fontSize: '20vw', color: 'yellow' }} />
+              ) : (
+                <LightsOffIcon sx={{ fontSize: '20vw', color: 'rgb(176, 176, 176)' }} />
+              )}
+            </Button>
+          </div>
+        </div>
       </div>
 
 
-      <h2>Vehicle Location</h2>
-      <div>Park vehicle and start location monitoring</div>
-      <Button onClick={handleParkClick}>
-      {parkVal ? (
-        <ParkingIcon fontSize='large' sx={{ color: 'primary' }} />
-      ) : (
-        <ParkingIcon fontSize='large' sx={{ color: 'gray' }} />
-      )}
-      </Button>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', marginTop: '1vw', borderRadius: '10px', width: '86.1vw', height: '120vw',  backgroundColor: 'rgba(161, 128, 196, 0.5)' }}>
 
-      <Map lat={0.0} long={0.0}/>
 
+        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly' }}>
+        
+          <span style={{ fontSize: '5vw' }}>Vehicle Location</span>
+          <Button aria-describedby={id} onClick={handleInfoOpen}
+                  style={{ height: '3vw', width: '3vw', padding: '0px', borderWidth: '0px', margin: '0px', minWidth: 'unset', minHeight: 'unset', marginLeft: '3.5vw', color: 'rgb(230, 230, 230)' }}>
+            <InfoIcon sx={{ fontSize: '4vw', color: 'primary', marginTop: '-2.2vw' }}/>
+          </Button>
+          <Popover
+            id={id}
+            open={open}
+            anchorEl={anchorEl}
+            onClose={handleClose}
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'left',
+            }}
+          >
+            <Typography sx={{ p: 2, backgroundColor: 'rgba(33, 31, 91, 0.5)', color: 'rgb(30, 30, 30)', fontSize: '4vw' }}>Press park button {'<P>'} to park vehicle and start location monitoring</Typography>
+          </Popover>
+        </div>
+
+        <Button onClick={handleClick("parkMode")}>
+            {parkMode ? (
+              <ParkingIcon sx={{ fontSize: '20vw', color: 'primary' }} />
+            ) : (
+              <ParkingIcon sx={{ fontSize: '20vw', color: 'rgb(176, 176, 176)' }} />
+            )}
+          </Button>
+          
+          <div style={{width: '95%' }}>
+            <Map lat={GPSReading?.lat} long={GPSReading?.long} />
+          </div>
+      </div>
     </body>
   );
 }
+
+
 
 export default App;

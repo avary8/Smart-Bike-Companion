@@ -7,6 +7,7 @@ const errorHandler = require('./middleware/errorHandler');
 const mongoose = require('mongoose');
 const connectDB = require('./config/dbConn');
 const connectWS = require('./config/websocketConn');
+const automated = require('./controllers/automatedListeners');
 const { config } = require('dotenv');
 const app = express();
 const server = http.createServer(app);
@@ -21,10 +22,19 @@ app.use((req, res, next) => {
     req.ws = ws;
     next();
 });
+automated.monitorESP(ws);
+
 
 
 const PORT = process.env.PORT || 3500;
 
+// Add CORS middleware
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*'); // Allow requests from any origin
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    next();
+  });
 
 
 // custom middleware logger

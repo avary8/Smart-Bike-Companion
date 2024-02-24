@@ -7,8 +7,8 @@ const mapName = import.meta.env.VITE_MAP_NAME;
 const region = import.meta.env.VITE_AWS_REGION;
 
 type Props = {
-  lat: number;
-  long: number;
+  lat: string;
+  long: string;
 };
 
 const Map: React.FC<Props> = ({ lat, long }) => {
@@ -33,13 +33,13 @@ const Map: React.FC<Props> = ({ lat, long }) => {
 
     if (lat && long){
       new maplibregl.Marker()
-      .setLngLat([long, lat])
+      .setLngLat([parseFloat(long), parseFloat(lat)])
       .addTo(map);
     }
    }, []);
 
   return (
-    <div id="map" style={{ width: '100%', height: '70vh' }} />
+    <div id="map" style={{ borderRadius: '10px', width: '82vw', height: '78vw' }}/>
   );
 };
 

@@ -1,0 +1,80 @@
+-------------database calls only--------------
+
+get '/autoMode'
+put '/autoMode'
+
+get '/lightMode'
+put '/lightMode'
+
+get '/parkMode'
+put '/parkMode'
+
+
+-------------esp32 calls only--------------
+
+get '/tempReading'
+get '/gpsReading'
+get '/checkLights'
+
+
+-------------both calls--------------
+get '/getAll'
+
+light on, auto on: light on regardless of auto
+light on, auto off: light on, regardless of auto
+
+light off, auto on ----  if auto says on, on   and if auto says off, off (ignore light)
+light off, auto off ---  off
+
+
+lat + long : [
+    29.650789,
+    -82.346568
+]
+
+
+consider adding time to payload that tells when value was gotten
+then you can also have a refresh button that allows ppl to call sensor data
+    otherwise it just gets the last data in database
+
+    have backend call esp32 periodically to update database
+
+
+get / all --> call at beginning
+http: //localhost:3500/data/getAll
+{
+    "errCode": "0",
+    "payload": {
+        "light": {
+            "val": "1057"
+        },
+        "tempReading": {
+            "temp": "67",
+            "humidity": "57",
+            "heat_index": "66"
+        },
+        "gpsReading": {
+            "lat": "nan",
+            "long": "nan",
+            "alt": "nan",
+            "speed": "nan"
+        },
+        "lightMode": false,
+        "autoMode": true,
+        "parkMode": false
+    }
+}
+
+
+get / TEMP reading
+http: //localhost:3500/data/TempReading
+{
+    "errCode": "0",
+    "payload": {
+        "tempReading": {
+            "temp": "67",
+            "humidity": "58",
+            "heat_index": "66"
+        }
+    }
+}

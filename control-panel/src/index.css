@@ -3,8 +3,9 @@
 @tailwind utilities;
 
 * {
-  /* color: white; */
-  /* background-color: rgb(49, 24, 107); */
+  overscroll-behavior-y: contain;
+  /* color: white;
+  background-color: rgb(49, 24, 107); */
 }
 
 :root {

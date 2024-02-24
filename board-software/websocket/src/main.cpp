@@ -6,17 +6,28 @@
 #include <Adafruit_Sensor.h>
 #include "DHT.h"
 #include <string>
-#define DHTTYPE DHT11
-#define defaultTempPin 14
-DHT dht(defaultTempPin, DHTTYPE);
+#include <cmath>
+#include <inttypes.h>
 
+// define temp
+#define DHTTYPE DHT11
+#define TEMP_SENSOR_PIN 14
+DHT dht(TEMP_SENSOR_PIN, DHTTYPE);
+
+// define other light and sensor pins
+#define LIGHT_SENSOR_PIN 34
+#define LIGHT_BACK_PIN 32
+
+// define gps
 #define GPS_BAUDRATE 9600
 #define RXD2 16
 #define TXD2 17
 
+// define wifi
 #define WIFI_SSID "ufdevice"
 #define WIFI_PASSWORD "gogators"
 
+// define websocket
 #define WS_HOST "42lnjvrypg.execute-api.us-east-1.amazonaws.com" 
 #define WS_PORT 443
 #define WS_URL "/dev"
@@ -30,36 +41,50 @@ WebSocketsClient wsClient;
 TinyGPSPlus gps;
 uint64_t chipId = ESP.getEfuseMac();
 
-char* uint64ToString(uint64_t value, char* buffer, int base) {
-  static char numBuffer[21]; // Buffer for the maximum 64-bit value in base 2
-  itoa(value, numBuffer, base);
-  return numBuffer;
-}
+int lastVal = 100000;
 
-void sendErrorMsg(const char* error){
+
+void sendErrorMsg(const char* error, const char* messageID){
   char msg[MSG_SIZE];
 
-  sprintf(msg, "{\"action\":\"msg\",\"type\":\"error\",\"device\":\"%llu\",\"body\":\"%s\"}", chipId, error);
+  sprintf(msg, "{\"action\":\"msg\",\"type\":\"error\",\"device\":\" %" PRIu64 " \",\"messageID\":\"%s\",\"body\":{\"errMsg\":\"%s\"}}", chipId, messageID, error);
   wsClient.sendTXT(msg);
 }
 
-void sendOkMsg(int pinNum){
+void sendSetMsg(const char* messageID, int val){
   char msg[MSG_SIZE];
-  sprintf(msg, "{\"action\":\"msg\",\"type\":\"status\",\"device\":\"%llu\",\"pin\":\"%d\",\"body\":\"ok\"}", chipId, pinNum);
+  sprintf(msg, "{\"action\":\"msg\",\"type\":\"status\",\"device\":\"%" PRIu64 "\",\"messageID\":\"%s\",\"body\":{\"status\":{\"val\":\"%d\"}}}", chipId, messageID, val);
   wsClient.sendTXT(msg);
 }
 
-void sendGPSData(float lat, float lon) {
+void sendGetMsg(const char* messageID, int val){
   char msg[MSG_SIZE];
-  sprintf(msg, "{\"action\":\"msg\",\"type\":\"output\",\"device\":\"%llu\",\"body\":{\"lat\":\"%.6f\",\"long\":\"%6f\"}}", chipId, lat, lon);
+  sprintf(msg, "{\"action\":\"msg\",\"type\":\"output\",\"device\":\"%" PRIu64 "\",\"messageID\":\"%s\",\"body\":{\"output\":{\"val\":\"%d\"}}}", chipId, messageID, val);
   wsClient.sendTXT(msg);
 }
 
-void sendTempData(float temp, float humidity, float heatIndex) {
-  char msg[MSG_SIZE];
-  sprintf(msg, "{\"action\":\"msg\",\"type\":\"output\",\"device\":\"%llu\",\"body\":{\"temp\":\"%.6f\",\"humidity\":\"%6f\",\"heat index\":\"%6f\"}}", chipId, temp, humidity, heatIndex);
+void sendData(const char* messageID, const char* data, int more) {
+  Serial.println("in send tempdata");
+  char msg[MSG_SIZE*more];
+  sprintf(msg, "{\"action\":\"msg\",\"type\":\"output\",\"device\":\"%" PRIu64 "\",\"messageID\":\"%s\",\"body\":{\"output\":{%s}}}", chipId, messageID, data);
+  Serial.println(msg);
+  Serial.println(data);
+
+  Serial.println("before send msg");
   wsClient.sendTXT(msg);
+  Serial.println("after send msg");
+  
 }
+
+
+/* type: something
+      body: {
+        something: {
+          actual values: 3
+          another value: 2
+        }
+}
+*/
 
 void handleMsg(uint8_t* payload){
   StaticJsonDocument<JSON_DOC_SIZE> doc;
@@ -68,177 +93,188 @@ void handleMsg(uint8_t* payload){
   if (error) {
     Serial.print(F("deserializeJson() failed: "));
     Serial.println(error.f_str());
-    sendErrorMsg(error.c_str());
+    sendErrorMsg(error.c_str(), "-1");
     return;
   }
 
-  // Log the received message
-  Serial.print("Received message: ");
-  serializeJson(doc, Serial);
-  Serial.println(" : end of message");
+  // if (!doc.containsKey("messageID")){
+  //   sendErrorMsg("messageID missing", "-1");
+  //   return;
+  // }
 
-  if (doc.containsKey("type")){  
+  const char* messageID = "1";
+  //doc["body"]["messageID"];
+
+  Serial.println("before contains type");
+  if (doc.containsKey("type")){
     if (!doc["type"].is<const char*>()) {
-      sendErrorMsg("invalid message type format");
+      sendErrorMsg("invalid message type format", messageID);
       return;
     }
-
+    Serial.println("before cmd compare");
     if(strcmp(doc["type"], "cmd") == 0){
       if (!doc["body"].is<JsonObject>()){
-        sendErrorMsg("invalid command body");
+        sendErrorMsg("invalid command body", messageID);
         return;
       }
 
+      if (!doc["body"]["type"]){
+        sendErrorMsg("No operation provided", messageID);
+        return;
+      } 
+
+      const char* operation = doc["body"]["type"];
+
+      if (strcmp(operation, "getAll") == 0){
+        // get photo sensor val
+        auto val = analogRead(LIGHT_SENSOR_PIN);
+        std:: string photoVal = "\"light\":{\"val\":\"" + std::to_string(int(val)) + "\"}";
       
-      if(strcmp(doc["body"]["type"], "pinMode") == 0){
-        if (!doc["body"]["pin"]){
-          Serial.println("no pin provided");
-          sendErrorMsg("No pin provided");
-          return;
+        // get temp vals
+        float humidity = dht.readHumidity();
+
+        // // Read temperature as Celsius (the default)
+        // float celsius = dht.readTemperature();
+
+        // Read temperature as Fahrenheit (isFahrenheit = true)
+        float fahrenheit = dht.readTemperature(true);
+
+        float hif = dht.computeHeatIndex(fahrenheit, humidity);
+
+        std:: string tempVals = "\"tempReading\":{\"temp\":\"" + std::to_string(int(fahrenheit)) + "\",\"humidity\":\"" + std::to_string(int(humidity)) + "\",\"heat_index\":\"" + std::to_string(int(hif)) + "\"}";
+
+        // get gps vals
+        std:: string gpsVals = "\"gpsReading\":{";
+
+        if (Serial2.available()){
+          gps.encode(Serial2.read());
+          if (gps.location.isValid()){
+            gpsVals += "\"lat\":\"" + std::to_string(gps.location.lat()) + "\",\"long\":\"" + std::to_string(gps.location.lng()) + "\",";
+          } else {
+            gpsVals += "\"lat\":\"nan\",\"long\":\"nan\",";
+          }
+          if (gps.altitude.isValid()){
+            gpsVals += "\"alt\":\"" + std::to_string(gps.altitude.feet()) + "\",";
+          } else {
+            gpsVals += "\"alt\":\"nan\",";
+          }
+                  
+          if (gps.speed.isValid()) {
+            gpsVals += "\"speed\":\"" + std::to_string(int(gps.speed.mph())) + "\"}";
+          } else {
+            gpsVals += "\"speed\":\"nan\"}";
+          }
         } 
-        if(strcmp(doc["body"]["type"], "OUTPUT") == 0 || strcmp(doc["body"]["type"], "output") == 0 || strcmp(doc["body"]["type"], "INPUT") == 0  || strcmp(doc["body"]["type"], "input") == 0 ){
-          pinMode(std::atoi(doc["body"]["pin"]), doc["body"]["mode"]);
-          sendOkMsg(std::atoi(doc["body"]["pin"]));
-        } else {
-          sendErrorMsg("incorrect mode value");
+
+        std::string allVals = photoVal + "," + tempVals + "," + gpsVals;
+        sendData(messageID, allVals.c_str(), 2);
+        return;
+      }
+
+      // set lights
+      if (strcmp(operation, "setLight") == 0){
+        digitalWrite(LIGHT_BACK_PIN, doc["body"]["value"]);
+        int val = digitalRead(LIGHT_BACK_PIN);
+        sendSetMsg(messageID, val);
+        return;
+      }
+
+      // get photo sensor value
+      if (strcmp(operation, "getPhoto") == 0){
+        auto val = analogRead(LIGHT_SENSOR_PIN);
+        sendGetMsg(messageID, val);
+        return;
+      }
+
+      Serial.println("before temp");
+      // get temp
+      if (strcmp(operation, "getTemp") == 0){
+        std:: string tempVals = "\"tempReading\":{";
+
+        Serial.println("in temp");
+        float humidity = dht.readHumidity();
+        float fahrenheit = dht.readTemperature(true);
+        float hif = NAN;
+
+        Serial.println("before chcking nan");
+
+        if (!isnan(humidity) && !isnan(fahrenheit)) {
+          hif = dht.computeHeatIndex(fahrenheit, humidity);
         }
-        return;
-      }
 
-      if(strcmp(doc["body"]["type"], "digitalWrite") == 0){
-        if (!doc["body"]["pin"]){
-          sendErrorMsg("No pin provided");
-          return;
-        } 
-        digitalWrite(std::atoi(doc["body"]["pin"]), doc["body"]["value"]);
-        sendOkMsg(std::atoi(doc["body"]["pin"]));
-        return;
-      }
+        Serial.println("before stringing temp");
 
-      if(strcmp(doc["body"]["type"], "digitalRead") == 0){
-        if (!doc["body"]["pin"]){
-          sendErrorMsg("No pin provided");
-          return;
-        } 
-        auto value = digitalRead(std::atoi(doc["body"]["pin"]));
+        tempVals += "\"temp\":\"" + std::to_string(int(fahrenheit)) + "\",\"humidity\":\"" + std::to_string(int(humidity)) + "\",\"heat_index\":\"" + std::to_string(int(hif)) + "\"}";
 
-        char msg[MSG_SIZE];
-        sprintf(msg, "{\"action\":\"msg\",\"type\":\"output\",\"device\":\"%llu\",\"pin\":\"%d\",\"body\":\"%d\"}", chipId, std::atoi(doc["body"]["pin"]), value);
-        wsClient.sendTXT(msg);
-        return;
-      }
+       
+        // // Read temperature as Celsius (the default)
+        // float celsius = dht.readTemperature();
+        //   // Compute heat index in Celsius (isFahreheit = false)
+        //   float hic = dht.computeHeatIndex(celsius, humidity, false);
 
-      if(strcmp(doc["body"]["type"], "analogRead") == 0){
-        if (!doc["body"]["pin"]){
-          sendErrorMsg("No pin provided");
-          return;
-        } 
-        auto value = analogRead(std::atoi(doc["body"]["pin"]));
-
-        char msg[MSG_SIZE];
-        sprintf(msg, "{\"action\":\"msg\",\"type\":\"output\",\"device\":\"%llu\",\"pin\":\"%d\",\"body\":\"%d\"}", chipId, std::atoi(doc["body"]["pin"]), value);
-        wsClient.sendTXT(msg);
-
+       
+        Serial.println("before sendtempdate");
+        sendData(messageID, tempVals.c_str(), 1);
         return;
       }
 
       // Get GPS
-      if(strcmp(doc["body"]["type"], "getGPS") == 0){
-
-        Serial.println("in getGps");
+      if (strcmp(operation, "getGPS") == 0){
+        std:: string gpsVals = "\"gpsReading\":{";
 
         if (Serial2.available()){
-
-          Serial.println("before encode");
-
           gps.encode(Serial2.read());
 
           if (gps.location.isValid()){
-            Serial.println("loc valid");
-            Serial.print("Latitude= "); 
-            Serial.print(gps.location.lat(), 6);
-            Serial.print(" Longitude= "); 
-            Serial.println(gps.location.lng(), 6);
-
-            Serial.println("sending data");
-            sendGPSData(gps.location.lat(), gps.location.lng());
+            gpsVals += "\"lat\":\"" + std::to_string(gps.location.lat()) + "\",\"long\":\"" + std::to_string(gps.location.lng()) + "\",";
+          } else {
+            gpsVals += "\"lat\":\"nan\",\"long\":\"nan\",";
           }
+
           if (gps.altitude.isValid()){
-            Serial.print(F("- altitude: "));
-            Serial.println(gps.altitude.meters());
+            gpsVals += "\"alt\":\"" + std::to_string(gps.altitude.feet()) + "\",";
+          } else {
+            gpsVals += "\"alt\":\"nan\",";
           }
                   
           if (gps.speed.isValid()) {
-            Serial.print(F("- speed: "));
-            Serial.print(gps.speed.kmph());
-            Serial.println(F(" km/h"));
+            gpsVals += "\"speed\":\"" + std::to_string(int(gps.speed.mph())) + "\"}";
+          } else {
+            gpsVals += "\"speed\":\"nan\"}";
           }
-
-          // if (gps.date.isValid() && gps.time.isValid()) {
-          //   setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
-          //   adjustTime(time_offset);
-          //   Serial.println(timeStatus());
-          //   Serial.println(now());
-          // } 
-          
+          sendData(messageID, gpsVals.c_str(), 1);
         } else {
-          Serial.println("unable to retrieve gps data");
-          sendErrorMsg("Unable to retrieve GPS data");
+          sendErrorMsg("Unable to retrieve GPS data", messageID);
         }
-          return;
-        }
+        return;
+      }
+      
+      // Get device id
+      if (strcmp(operation, "getDeviceId") == 0){
+        char msg[MSG_SIZE];
+        Serial.println("before sprintf");
+        sprintf(msg, "{\"action\":\"msg\",\"type\":\"connection\",\"messageID\":\"%s\",\"device\":\"%" PRIu64 "\"}", messageID, chipId);
 
-        if(strcmp(doc["body"]["type"], "getTemp") == 0){
-          if (doc["body"]["pin"] && std::atoi(doc["body"]["pin"]) != defaultTempPin){
-            DHT dht(defaultTempPin, DHTTYPE);
-          }
-          
-          float humidity = dht.readHumidity();
+        Serial.println("before sentTXT");
+        wsClient.sendTXT(msg);
+        return;
+      }
 
-          // // Read temperature as Celsius (the default)
-          // float celsius = dht.readTemperature();
-
-          // Read temperature as Fahrenheit (isFahrenheit = true)
-          float fahrenheit = dht.readTemperature(true);
-          Serial.print("humidity: ");
-          Serial.println(humidity);
-          Serial.print("temp: ");
-          Serial.println(fahrenheit);
-
-          if (isnan(fahrenheit) && isnan(humidity)){
-            sendErrorMsg("Unable to retrieve temperature data");
-            return;
-          } 
-          float hif = dht.computeHeatIndex(fahrenheit, humidity);
-          //   // Compute heat index in Celsius (isFahreheit = false)
-          //   float hic = dht.computeHeatIndex(celsius, humidity, false);
-
-          sendTempData(fahrenheit,  humidity,  hif);
-          return;
-        }
-        
-        // Get device id
-        if(strcmp(doc["body"]["type"], "getDeviceId") == 0){
-          char msg[MSG_SIZE];
-          sprintf(msg, "{\"action\":\"msg\",\"type\":\"connection\",\"device\":\"%llu\"}", chipId);
-          wsClient.sendTXT(msg);
-          return;
-        }
-
-
-      sendErrorMsg("unsupported command type");
+      sendErrorMsg("unsupported command type", messageID);
       return;
     }
   }
-
-  sendErrorMsg("unsupported message type");
-    return;
+  sendErrorMsg("unsupported message type", messageID);
+  return;
 }
 
+
 void onWSEvent(WStype_t type, uint8_t* payload, size_t length){
+  Serial.println("in switcher");
   switch(type){
     case WStype_CONNECTED:
-      char msg[MSG_SIZE];
+      wsClient.sendPing(payload);
+      // char msg[MSG_SIZE];
       // sprintf(msg, "{\"action\":\"msg\",\"type\":\"connection\",\"device\":\"%llu\"}", chipId);
       // wsClient.sendTXT(msg);
       Serial.println("WS Connected");
@@ -252,7 +288,17 @@ void onWSEvent(WStype_t type, uint8_t* payload, size_t length){
       Serial.printf("WS Message: %s\n", payload);
       handleMsg(payload);
       break;
+
+    case WStype_ERROR:
+      Serial.printf("WS Error");
+      break;
+
+    case WStype_PING:
+      Serial.println("Received ping from Node.js");
+      wsClient.sendPing(payload);
+      break;
   }
+  
 }
 
 void setup() {
@@ -263,6 +309,8 @@ void setup() {
   //wifiMulti.addAP(WIFI_SSID);
 
   wifiMulti.addAP(WIFI_SSID, WIFI_PASSWORD);
+
+  pinMode(LIGHT_BACK_PIN, OUTPUT);
 
   while (wifiMulti.run() != WL_CONNECTED) {
     delay(100);
@@ -277,5 +325,21 @@ void setup() {
 void loop() {
   //digitalWrite(25, 1);
   //digitalWrite(25, WiFi.status() == WL_CONNECTED);
+
+  auto val = analogRead(LIGHT_SENSOR_PIN);
+  int led = digitalRead(LIGHT_BACK_PIN);
+  if (val < 400 && lastVal != 0 && led == 0){
+    lastVal = 0;
+    char msg[96];
+    sprintf(msg, "{\"action\":\"msg\",\"type\":\"dark\",\"device\":\"%" PRIu64 "\"}", chipId);
+    wsClient.sendTXT(msg);
+  } else if (val > 400 && lastVal != 100000 && led == 1) {
+    lastVal = 100000;
+    char msg[96];
+    sprintf(msg, "{\"action\":\"msg\",\"type\":\"bright\",\"device\":\"%" PRIu64 "\"}", chipId);
+    wsClient.sendTXT(msg);
+  }
+
+
   wsClient.loop();
 }
