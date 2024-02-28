@@ -1,8 +1,9 @@
+import React from 'react';
 import 'tailwindcss/tailwind.css';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./App.css";
 import useWebSocket from "react-use-websocket";
-import { Switch } from '@mui/base/Switch';
+// import { Switch } from '@mui/base/Switch';
 import ParkingIcon from '@mui/icons-material/LocalParking';
 import AutoLightIcon from '@mui/icons-material/BrightnessAuto';
 import LightsOffIcon from '@mui/icons-material/Brightness1';
@@ -14,40 +15,39 @@ import WaterIcon from '@mui/icons-material/Water';
 import AltitudeIcon from '@mui/icons-material/Terrain';
 import SpeedIcon from '@mui/icons-material/Speed';
 import InfoIcon from '@mui/icons-material/Info';
-import MapIcon from '@mui/icons-material/Map';
 import Popover from '@mui/material/Popover';
 import Typography from '@mui/material/Typography';
-import ReloadIcon from '@mui/icons-material/Cached';
+
 
 // import axios from '../api/backend.js';
-import axios from 'axios';
-import { light } from '@mui/material/styles/createPalette';
-import React from 'react';
+// import axios from 'axios';
+// import { light } from '@mui/material/styles/createPalette';
 
-type MessageBody = {
-  action: string
-  type: string
-  connectionID: string,
-  deviceID: string,
-  messageID: string,
-  body: unknown
-};
+
+// type MessageBody = {
+//   action: string
+//   type: string
+//   connectionID: string,
+//   deviceID: string,
+//   messageID: string,
+//   body: unknown
+// };
 
 const tempID = '189922615539556';
 const Route = "http://localhost:3500"
 
 function App() {
-  const { readyState, lastMessage, sendMessage, sendJsonMessage } = useWebSocket(import.meta.env.VITE_WEBSOCKET_ADDRESS);
+  const { readyState, lastMessage, sendMessage, sendJsonMessage } = useWebSocket(process.env.REACT_APP_WEBSOCKET_ADDRESS);
 
-  const [tempReading, setTempReading] = useState({ temp: "67", humidity: "57", heat_index: "66" });
-  const [GPSReading, setGPSReading] = useState({ lat: "29.650789", long: "-82.346568", alt: "nan", speed: "nan" });
+  const tempReading = useRef({ temp: "67", humidity: "57", heat_index: "66" });
+  const GPSReading = useRef({ lat: "29.650789", long: "-82.346568", alt: "nan", speed: "nan" });
 
   const [parkMode, setParkMode] = useState(false);
   const [autoLightMode, setAutoLightMode] = useState(false);
   const [lightMode, setLightMode] = useState(false);
-  const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null);
+  const [anchorEl, setAnchorEl] = useState(null);
 
-  const [userLoc, setUserLoc] = useState({});
+  const userLoc = useRef({ lat: "-96", long: "37.8" });
 
   sendJsonMessage({
     action: "msg",
@@ -62,7 +62,7 @@ function App() {
 
 
 
-    const parsedMsg = JSON.parse(lastMessage.data) as MessageBody;
+    const parsedMsg = JSON.parse(lastMessage.data);
     console.log(parsedMsg);
 
     const parsedMessage = JSON.parse(JSON.stringify(lastMessage.toString()));
@@ -77,25 +77,24 @@ function App() {
 
 
   useEffect (() => {
-    //const intervalId = setInterval(async() => { 
-      // const userloc = await Map.GetUserLoc();
-      // setUserLoc(userloc);
-  
-    const intervalId = setInterval(() => { 
-      if (navigator.geolocation){
-        try {
-          var userloc;
-          navigator.geolocation.getCurrentPosition(
-            position => {
-              setUserLoc ({'lat': position.coords.latitude, 'long': position.coords.longitude});
-            }
-          )
-        } catch (error){
-          console.log(`unable to get user location. error: ${error} `);
-        }
-      } else {
-        console.log(`geolocation is not supported`);
-      }
+    const intervalId = setInterval(async () => { 
+
+      userLoc.current = await Map.GetUserLoc();
+
+    // const intervalId = setInterval(() => { 
+    //   if (navigator.geolocation){
+    //     try {
+    //       navigator.geolocation.getCurrentPosition(
+    //         position => {
+    //           setUserLoc({'lat': position.coords.latitude, 'long': position.coords.longitude});
+    //         }
+    //       )
+    //     } catch (error){
+    //       console.log(`unable to get user location. error: ${error} `);
+    //     }
+    //   } else {
+    //     console.log(`geolocation is not supported`);
+    //   }
     }, 10000)
     return () => clearInterval(intervalId);
   }, [])
@@ -122,18 +121,18 @@ function App() {
   // }, []);
 
 
-  const getSensorReading = async (route: string) => {
-    try {
-      const response = await axios.get(`${Route}/data/${route}/${tempID}`);
-      if (response?.data?.payload !== undefined){
-        setSensorReading(route, response.data.payload);
-      }
-    } catch (error: any){
-      console.error(`Error getting ${Route}/${route}/${tempID} sensor data: `, error?.response?.data?.errMsg || error.message);
-    }
-  }
+  // const getSensorReading = async (route: string) => {
+  //   try {
+  //     const response = await axios.get(`${Route}/data/${route}/${tempID}`);
+  //     if (response?.data?.payload !== undefined){
+  //       setSensorReading(route, response.data.payload);
+  //     }
+  //   } catch (error: any){
+  //     console.error(`Error getting ${Route}/${route}/${tempID} sensor data: `, error?.response?.data?.errMsg || error.message);
+  //   }
+  // }
 
-  const setSensorReading = (async (path: string, payload: any) => {
+  const setSensorReading = (async (path, payload) => {
     switch(path){
       case 'autoMode':
         setAutoLightMode(payload);
@@ -145,10 +144,10 @@ function App() {
         setParkMode(payload);
         break;
       case 'tempReading':
-        setTempReading(payload);
+        tempReading = payload;
         break;
       case 'gpsReading':
-        setGPSReading(payload);
+        GPSReading = payload;
         break;
       case 'getAll':
         Object.entries(payload).forEach(([key, value]) => {
@@ -160,27 +159,28 @@ function App() {
   });
 
 
-  const handleModeUpdate = (async (route: string) => {
-    try {
-      if (route === 'autoMode' || route === 'lightMode' || route === 'parkMode'){
-        const response = await axios.put(`${Route}/data/${route}/${tempID}`);
-        console.log(response.data);
-        if (response?.data?.payload !== true || response?.data?.payload !== false){
-          console.log("in payload check")
-          await setSensorReading(route, response.data.payload);
-        }
-      } 
-    } catch (error: any){
-      console.error(`Error updating ${Route}/${route}/${tempID} sensor data: `, error?.response?.data?.errMsg || error.message);
-    }
-  });
+  // const handleModeUpdate = (async (route: string) => {
+  //   try {
+  //     if (route === 'autoMode' || route === 'lightMode' || route === 'parkMode'){
+  //       const response = await axios.put(`${Route}/data/${route}/${tempID}`);
+  //       console.log(response.data);
+  //       if (response?.data?.payload !== true || response?.data?.payload !== false){
+  //         console.log("in payload check")
+  //         await setSensorReading(route, response.data.payload);
+  //       }
+  //     } 
+  //   } catch (error: any){
+  //     console.error(`Error updating ${Route}/${route}/${tempID} sensor data: `, error?.response?.data?.errMsg || error.message);
+  //   }
+  // });
 
 
-  const handleClick = (route: string) => async() => {
-    await handleModeUpdate(route);
+  const handleClick = (route) => async() => {
+    console.log("click")
+    //await handleModeUpdate(route);
   };
 
-  const handleInfoOpen = ((event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleInfoOpen = ((event) => {
     setAnchorEl(event.currentTarget);
   });
 
@@ -195,7 +195,7 @@ function App() {
     <body className="App" style={{background: 'linear-gradient(to bottom, #3b1f5b, #192841)', color: 'rgb(230, 230, 230)'}}>
       <h2>hamburger menu maybe</h2>
 
-      {JSON.stringify(userLoc)}
+      {JSON.stringify(userLoc?.current)}
 
         {/* <div className="py-2">
         <label className="relative inline-flex items-center mb-5 cursor-pointer">
@@ -207,7 +207,7 @@ function App() {
 
         <div style={{ borderRadius: '10px', width: '60vw', height: '10vw',  backgroundColor: 'rgba(161, 128, 196, 0.2)', display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', textAlign: 'center', alignItems: 'center' }}>
           <span style={{ fontSize: '5vw' }}>
-            Feels like {tempReading?.heat_index}&deg;F
+            Feels like {tempReading?.current?.heat_index}&deg;F
           </span>
         </div>
 
@@ -225,7 +225,7 @@ function App() {
               <span style={{ marginLeft: '-2.2vw', fontSize: '5vw' }}>Temperature<br/></span>
             </div>
             
-            <span style={{ fontSize: '8vw' }}><br/>{tempReading?.temp}&deg;F</span>
+            <span style={{ fontSize: '8vw' }}><br/>{tempReading?.current?.temp}&deg;F</span>
           </div>
           
           <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',   backgroundColor: 'rgba(161, 128, 196, 0.2)' }}>
@@ -233,7 +233,7 @@ function App() {
                 <WaterIcon sx={{ fontSize: '8vw', color: 'primary', marginRight: '-1.6vw', marginLeft: '-1.6vw' }} />
                 <span style={{ fontSize: '5vw', marginLeft: '-2.2vw' }}>Humidity<br/></span>
             </div>
-            <span style={{ fontSize: '8vw' }}><br/>{tempReading?.humidity}%</span>
+            <span style={{ fontSize: '8vw' }}><br/>{tempReading?.current?.humidity}%</span>
           </div>
         </div>
     
@@ -251,11 +251,11 @@ function App() {
             <AltitudeIcon sx={{ fontSize: '8vw', color: 'primary' }} />
             <span style={{ fontSize: '5vw', marginRight: '6vw' }}>Altitude</span>
           </div>
-          {GPSReading?.alt ==='nan' ? 
+          {GPSReading?.current?.alt ==='nan' ? 
               (
                 <span style={{ fontSize: '4vw' }}><br/>Not available at the moment</span>
               ) : (
-                <span style={{ fontSize: '8vw' }}><br/>GPSReading?.alt </span>
+                <span style={{ fontSize: '8vw' }}><br/>GPSReading?.current?.alt </span>
               )} 
         </div>
           
@@ -264,11 +264,11 @@ function App() {
             <SpeedIcon sx={{ fontSize: '8vw', color: 'primary' }} />
             <span style={{ fontSize: '5vw', marginRight: '6.4vw' }}>Speed</span>
           </div>
-            {GPSReading?.speed ==='nan' ? 
+            {GPSReading?.current?.speed ==='nan' ? 
               (
                 <span style={{ fontSize: '4vw' }}><br/>Not available at the moment</span>
               ) : (
-                <span style={{ fontSize: '8vw' }}><br/>GPSReading?.speed </span>
+                <span style={{ fontSize: '8vw' }}><br/>GPSReading?.current?.speed </span>
               )} 
         </div>
       </div>
@@ -361,13 +361,14 @@ function App() {
             )}
           </Button>
           
-          <div id="map-container" style={{width: '95%' }}>
-            <Map.Map vehicle={GPSReading} />
+          <div style={{width: '95%' }}>
+            <Map.Map vehicle={GPSReading?.current} />
           </div>
       </div>
     </body>
   );
 }
+
 
 
 export default App;

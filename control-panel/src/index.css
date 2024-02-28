@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 * {
-  overscroll-behavior-y: contain;
+  /* overscroll-behavior-y: contain; */
   /* color: white;
   background-color: rgb(49, 24, 107); */
 }

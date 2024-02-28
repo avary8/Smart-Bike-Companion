@@ -2,40 +2,39 @@ import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 //import Map, { NavigationControl } from "react-map-gl/maplibre";
 
+const apiKey = process.env.REACT_APP_MAP_API_KEY;
+const mapName = process.env.REACT_APP_MAP_NAME;
+const region = process.env.REACT_APP_AWS_REGION;
 
-const apiKey = import.meta.env.VITE_MAP_API_KEY;
-const mapName = import.meta.env.VITE_MAP_NAME;
-const region = import.meta.env.VITE_AWS_REGION;
+// type Props = {
+//   vehicle: {
+//     lat: string;
+//     long: string;
+//   }
+// };
 
-type Props = {
-  vehicle: {
-    lat: string;
-    long: string;
-  }
-};
-
-const MapRefs = () => {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<maplibregl.Map | null>(null);
+export function useMapRefs() {
+  const mapContainerRef = useRef(null);
+  const mapInstanceRef = useRef(null);
   return { mapContainerRef, mapInstanceRef };
 }
 
 
-// const GetUserLoc = async() => {
-//   const { mapInstanceRef } = MapRefs();
-//   var userLoc = { lat: Number , long: Number };
-//   if (mapInstanceRef?.current) {
-//     mapInstanceRef.current.on('locationfound', (e) => {
-//       userLoc = { lat: e.coords.latitude, long: e.coords.longitude };
-//     });
-//   }
-//   return userLoc;
-// };
+const GetUserLoc = async () => {
+  var userLoc;
+  const { mapInstanceRef } = useMapRefs();
+    if (mapInstanceRef?.current) {
+      mapInstanceRef.current.on('locationfound', (e) => {
+        userLoc = { lat: e.coords.latitude, long: e.coords.longitude };
+      });
+      return userLoc;
+    }
+};
 
 
-const Map: React.FC<Props> = ({ vehicle }) => {
+const Map = ({ vehicle }) => {
   const [mapInitialized, setMapInitialized] = useState(false);
-  const { mapContainerRef, mapInstanceRef } = MapRefs();
+  const { mapContainerRef, mapInstanceRef } = useMapRefs();
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
@@ -76,17 +75,10 @@ const Map: React.FC<Props> = ({ vehicle }) => {
     }
   }, [vehicle, mapInitialized]);
 
-  return <div ref={mapContainerRef} 
-              style={{ borderRadius: '10px', width: '82vw', height: '78vw', overflow: 'hidden' }}
-              onWheel={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              />;
+  return <div ref={mapContainerRef} style={{ borderRadius: '10px', width: '82vw', height: '78vw' }} />;
 };
 
 export default {
   Map, 
-  MapRefs,
-  //GetUserLoc
+  GetUserLoc
 }
