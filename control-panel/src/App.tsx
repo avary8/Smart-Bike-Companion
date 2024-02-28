@@ -27,7 +27,9 @@ import React from 'react';
 type MessageBody = {
   action: string
   type: string
-  pin: string
+  connectionID: string,
+  deviceID: string,
+  messageID: string,
   body: unknown
 };
 
@@ -46,6 +48,33 @@ function App() {
   const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null);
 
   const [userLoc, setUserLoc] = useState<{ lat: number; long: number } | null>(null);
+
+  sendJsonMessage({
+    action: "msg",
+    type: "cmd",
+    body: "hi"
+  });
+
+  useEffect(() => {
+    if (lastMessage === null){
+      return;
+    }
+
+    
+
+    const parsedMsg = JSON.parse(lastMessage.data) as MessageBody;
+    console.log(parsedMsg);
+
+    const parsedMessage = JSON.parse(JSON.stringify(lastMessage.toString()));
+
+    console.log(parsedMessage);
+
+    // const parsedMsg = JSON.parse(lastMessage) as MessageBody;
+
+    //console.log(parsedMsg);
+  }, [lastMessage])
+
+
 
   useEffect (() => {
     const intervalId = setInterval(() => { 

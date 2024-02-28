@@ -1,30 +1,33 @@
 require('dotenv').config();
 const Vehicle = require('../model/vehicles');
-const WebSocket = require('ws');
 
-const connectWS = async (ws) => {
+const connectWS = async (ws, id) => {
+    console.log("in connect");
     let vehicle;
     ws.once('open', async () => {
         console.log('Connected to WebSocket server');
+        
         try {
             var msg = JSON.stringify({
                 action: "msg", 
+                id: String(id),
                 type: "cmd",
                 body: {
                     type: "getDeviceId"
                 }
             })
+            console.log(msg);
             ws.send(msg);
         } catch (error) {
+            console.log('Error parsing message:', error);
             console.error('Error parsing message:', error);
         }
-        
-        ws.once('message', (data) => {
+        ws.once('msg', (data) => {
             console.log('Received message');
             try {
                 const parsedMessage = JSON.parse(data);
-                if (parsedMessage?.type === 'connection' && parsedMessage?.device){
-                    vehicle = checkDB(parsedMessage?.device);
+                if (parsedMessage?.type === 'connection' && parsedMessage?.id){
+                    vehicle = checkDB(parsedMessage?.id);
                 }
                 console.log('Parsed message:', parsedMessage);
             } catch (error) {

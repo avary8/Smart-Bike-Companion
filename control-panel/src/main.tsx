@@ -8,7 +8,7 @@ import SignIn from './signin/SignIn'
 ReactDOM.render(
   <BrowserRouter>
     <Routes>
-        <Route path="/"  element={<App/>} />
+        <Route path="*"  element={<App/>} />
         <Route path="/signin"  element={<SignIn/>} />
     </Routes>
     
