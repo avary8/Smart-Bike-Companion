@@ -60,14 +60,12 @@ function App() {
       return;
     }
 
-
-
     const parsedMsg = JSON.parse(lastMessage.data) as MessageBody;
     console.log(parsedMsg);
 
-    const parsedMessage = JSON.parse(JSON.stringify(lastMessage.toString()));
+    // const parsedMessage = JSON.parse(JSON.stringify(lastMessage.toString()));
 
-    console.log(parsedMessage);
+    // console.log(parsedMessage);
 
     // const parsedMsg = JSON.parse(lastMessage) as MessageBody;
 

@@ -48,7 +48,7 @@ const HandleListener = async(ws, id) =>{
             id: String(id),
             type: type,
             body: {
-            type: bodyType,
+                type: bodyType,
             }
         })
         } else {
@@ -57,8 +57,8 @@ const HandleListener = async(ws, id) =>{
             id: String(id),
             type: type,
             body: {
-            type: bodyType,
-            value: val
+                type: bodyType,
+                value: val
             }
         })
         }
@@ -79,10 +79,10 @@ const HandleListener = async(ws, id) =>{
             const parsedMessage = JSON.parse(JSON.stringify(data.toString('utf8')));
             console.log(parsedMessage);
             if (parsedMessage?.type == 'output'){
-                vals = await getValues(result);   
+                vals = await getValues(parsedMessage);   
                 handleESPdata(vals, parsedMessage?.id);
             } else if (parsedMessage?.type == 'status'){
-                vals = await getValues(result);
+                vals = await getValues(parsedMessage);
                 return vals;
             } else if (parsedMessage?.type == 'error'){
                 return Error(vals?.body?.errMsg);
@@ -110,17 +110,17 @@ const HandleListener = async(ws, id) =>{
                 { serialId: id },
                 {
                     $push: {
-                        temperatureHistory: { $each: [{ time: new Date(), value: vals?.tempReading?.temp }]}
+                        temperatureHistory: { $each: [{ time: new Date(), value: data?.tempReading?.temp }]}
                     },
                     $set: {
-                        temperature: vals?.tempReading?.temp,
-                        humidity: vals?.tempReading?.humidity,
-                        heatIndex: vals?.tempReading?.heatIndex,
+                        temperature: data?.tempReading?.temp,
+                        humidity: data?.tempReading?.humidity,
+                        heatIndex: data?.tempReading?.heatIndex,
                         location: {
-                            lat: vals?.gpsReading.lat, 
-                            long: vals?.tempReading?.long, 
-                            alt: vals?.tempReading?.alt, 
-                            speed: vals?.tempReading?.speed
+                            lat: data?.gpsReading?.lat, 
+                            long: data?.tempReading?.long, 
+                            alt: data?.tempReading?.alt, 
+                            speed: data?.tempReading?.speed
                         }
                     }
                 }
