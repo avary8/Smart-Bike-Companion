@@ -4,6 +4,7 @@ exports.handle = void 0;
 const client_dynamodb_1 = require("@aws-sdk/client-dynamodb");
 const client_apigatewaymanagementapi_1 = require("@aws-sdk/client-apigatewaymanagementapi");
 const util_1 = require("util");
+const SunCalc = require('suncalc');
 const { connect } = require("http2");
 const responseOk = {
     statusCode: 200,
@@ -36,12 +37,8 @@ const handle = async (event) => {
         case "$disconnect": // when client disconnects to websocket server
             // we will remove the client id from dynamoDB 
             return handleDisconnect();
-        case "getConnectionID":
-            console.log("it works");
-            break;
         case "$default":
         case "msg":
-            console.log(`deviceID: ${devID}  tempConns : ${tempConns[devID]}`);
             if (devID && !tempConns[devID]){
                 const getItemParams = {
                     TableName: 'Vehicles',
@@ -51,7 +48,7 @@ const handle = async (event) => {
                 };
 
                 const vehicle = await dynamodbClient.send(new client_dynamodb_1.GetItemCommand(getItemParams));
-                console.log(`vehicle found: ${JSON.stringify(vehicle)}`);
+                //console.log(`vehicle found: ${JSON.stringify(vehicle)}`);
                 try {
                     if (!vehicle?.Item){
                         await dynamodbClient.send(new client_dynamodb_1.PutItemCommand({
@@ -92,13 +89,13 @@ const handle = async (event) => {
                                 }
                         }));
                         tempConns[event.deviceID] = true;
-                        console.log(`item added: ${devID}`);
+                        //console.log(`item added: ${devID}`);
                     } else {
                         tempConns[event.deviceID] = true;
-                        console.log(`vehicle exists in db: ${devID}`)
+                        //console.log(`vehicle exists in db: ${devID}`)
                     }
                 } catch (error){
-                    console.log(`error adding vehicle to db: ${error}`);
+                    console.error(`error adding vehicle to db: ${error}`);
                 }
             }
             // we will scan dynamoDB for all clients . we iterate over all clients (except the one that is sending the msg) and send the message 
@@ -124,7 +121,7 @@ const handleConnect = async () => {
         // console.log(`sending connection id back: ${connectionId}`);
         // await sendMsg(connectionId, JSON.stringify({ action: "msg", type: "connectionID", body: `${connectionId}` })); // you cant send messages through connection till this returns statusCode 200. would need to send message on other end when it connects
     } catch (error){
-        console.log(`error adding new conneciton to db: ${error}`);
+        console.error(`error adding new conneciton to db: ${error}`);
     }
     const responseOk = {
         statusCode: 200
@@ -142,23 +139,22 @@ const handleDisconnect = async () => {
     }));
     return responseOk;
 };
-const handleMsg = async (thisConnectionId, body) => {
+const handleMsg = async (body) => {
     const output = await dynamodbClient.send(new client_dynamodb_1.ScanCommand({
         TableName: clientsTable,
     }));
-    console.log(`Body to send: ${body}`)
 
     if (output.Count && output.Count > 0) {
         for (const item of output.Items || []) {
-            console.log(`stored ${item["connectionId"].S} vs ${thisConnectionId}`);
+            //console.log(`stored ${item["connectionId"].S} vs ${connectionId}`);
 
-            if (item["connectionId"].S !== thisConnectionId) {
+            if (item["connectionId"].S !== connectionId) {
                 await sendMsg(item["connectionId"].S, body);
             }
         }
     }
     else {
-        await sendMsg(thisConnectionId, { action: "msg", type: "warning", body: "no recipient" });
+        await sendMsg(connectionId, { action: "msg", type: "warning", body: "no recipient" });
     }
     return responseOk;
 };
@@ -168,10 +164,9 @@ const sendMsg = async (connectionId, body) => {
             "ConnectionId": connectionId,
             "Data": textEncoder.encode(JSON.stringify(body))
         });
-        console.log(`message sent: ${JSON.stringify(body)}`);
     }
     catch (e) {
-        console.log(`error sending msg: ${e} . body: ${body}`);
+        console.error(`error sending msg: ${e} : body: ${JSON.stringify(body)}`);
         if (e instanceof client_apigatewaymanagementapi_1.GoneException) {
             if (retries < MAX_RETRIES){
                 console.log(`Retrying message send. Retry count: ${retries + 1}`);
@@ -206,15 +201,16 @@ const getValues = async (doc) => {
 const handleMessage = async (data) => {
     var vals;
     try {
-        console.log(`parsed message ${JSON.stringify(data)}`);
         if (data?.type == 'output'){
             vals = await getValues(data);   
             handleESPdata(vals, data?.deviceID);
+            handleMsg(data);
         } else if (data?.type == 'status'){
-            vals = await getValues(data);
-            return vals;
+            //vals = await getValues(data);
+            await getValues(data);
+            //return vals;
         } else {
-            frontEndHandleMessage(data, data?.deviceID);
+            frontEndHandleMessage(data);
         }
     } catch (error) { 
         console.error(error);
@@ -227,86 +223,46 @@ const handleMessage = async (data) => {
 
 const handleESPdata = async (data, id) => {
     try {
-        try {
-            const date = new Date();
-            const params = {
-                TableName: 'Vehicles',
-                Key: {
-                    'vehicleID': {S: id}
-                },
-                ExpressionAttributeNames: {
-                    '#L': 'location' // location is reserved word
-                },
-                ExpressionAttributeValues: {
-                    ':temphist': { L : [{
-                        'M': {
-                            'temp': { S: data?.tempReading?.temp },
-                            'date': { S: date.toISOString() }
-                        }
-    
-                    }]},
-                    ':T': { S: data?.tempReading?.temp },
-                    ':hum': { S: data?.tempReading?.humidity },
-                    ':heat': { S: data?.tempReading?.heat_index },
-                    ':loc': { M: {
-                        'latitude': { S: data?.gpsReading?.lat },
-                        'longitude': { S: data?.gpsReading?.long },
-                        'altitude': { S: data?.gpsReading?.alt },
-                        'speed': { S: data?.gpsReading?.speed },
-                    }},
-                },
-                ReturnValues: 'ALL_NEW',
-                UpdateExpression: 'SET temperatureHistory=list_append(temperatureHistory, :temphist), temperature = :T, humidity=:hum, heatIndex=:heat, #L=:loc',
-            };
-            await dynamodbClient.send(new client_dynamodb_1.UpdateItemCommand(params));
-
-        } catch (error) {
-            console.log(`error updating esp data: ${error}`);
-        }
-
-        var vehicle;
-        try {
-            vehicle = await getVehicle(id);
-        } catch (error){
-            console.error(error);
-            return Error(error); 
-        }
-
-        // light is on
-        if (vehicle?.Item?.lightMode){
-            await changeLight(1);
-        // light is off, auto is off
-        } else if (!vehicle?.Item?.autoMode){
-            await changeLight(0);
-        // light is off, auto is on
-        } else {
-            const currentDate = new Date();
-            const month = currentDate.getMonth()+1;
-            const hour = currentDate.getHours();
-            var lightSensorVal = data?.light?.val || 100000;
-            
-            var sun = {};
-            var darkOut = false;
-            try {
-                if(data?.gpsReading?.lat && data?.gpsReading?.long){
-                    sun = await calcSun(data?.gpsReading?.lat, data?.gpsReading?.long)
-                    if (hour <= sun.sunrise || hour >= sun.sunset){
-                        darkOut = true;
+        const date = new Date();
+        const params = {
+            TableName: 'Vehicles',
+            Key: {
+                'vehicleID': {S: id}
+            },
+            ExpressionAttributeNames: {
+                '#L': 'location' // location is reserved word
+            },
+            ExpressionAttributeValues: {
+                ':temphist': { L : [{
+                    'M': {
+                        'temp': { S: data?.tempReading?.temp },
+                        'date': { S: date.toISOString() }
                     }
-                }
-            } catch (error) {
-                console.error(error);
-                return Error(error);
-            }
-            
-            if (darkOut || ((month > 10 || month < 4) && (hour > 17 || hour < 8)) || ((month < 11 || month > 3) && (hour > 18 || hour < 7)) || (lightSensorVal < 400)){
-                await changeLight(1);
-            } else {
-                await changeLight(0);
-            }
-        }
+
+                }]},
+                ':T': { S: data?.tempReading?.temp },
+                ':hum': { S: data?.tempReading?.humidity },
+                ':heat': { S: data?.tempReading?.heat_index },
+                ':loc': { M: {
+                    'latitude': { S: data?.gpsReading?.lat },
+                    'longitude': { S: data?.gpsReading?.long },
+                    'altitude': { S: data?.gpsReading?.alt },
+                    'speed': { S: data?.gpsReading?.speed },
+                }},
+            },
+            ReturnValues: 'ALL_NEW',
+            UpdateExpression: 'SET temperatureHistory=list_append(temperatureHistory, :temphist), temperature = :T, humidity=:hum, heatIndex=:heat, #L=:loc',
+        };
+        await dynamodbClient.send(new client_dynamodb_1.UpdateItemCommand(params));
+
     } catch (error) {
-        console.error('Websocket incoming messages failed:', error);
+        console.error(`error updating esp data: ${error}`);
+    }
+
+    try {
+        await checkLights(data, id);
+    } catch (error) {
+        console.error('error checking lights', error);
         return Error(error)
     }
 };
@@ -329,6 +285,49 @@ const changeLight = async (val) => {
     }
 };
 
+const checkLights = async(data, id) =>{
+    var vehicle;
+    try {
+        vehicle = await getVehicle(id);
+    } catch (error){
+        console.error(error);
+        return Error(error); 
+    }
+
+    // light is on
+    if (vehicle?.Item?.lightMode){
+        await changeLight(1);
+    // light is off, auto is off
+    } else if (!vehicle?.Item?.autoMode){
+        await changeLight(0);
+    // light is off, auto is on
+    } else {
+        const currentDate = new Date();
+        const month = currentDate.getMonth()+1;
+        const hour = currentDate.getHours();
+        var lightSensorVal = data?.light?.val || 100000;
+        
+        var sun = {};
+        var darkOut = false;
+        try {
+            if(data?.gpsReading?.lat && data?.gpsReading?.long){
+                sun = await calcSun(data?.gpsReading?.lat, data?.gpsReading?.long)
+                if (hour <= sun.sunrise || hour >= sun.sunset){
+                    darkOut = true;
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            return Error(error);
+        }
+        
+        if (darkOut || ((month > 10 || month < 4) && (hour > 17 || hour < 8)) || ((month < 11 || month > 3) && (hour > 18 || hour < 7)) || (lightSensorVal < 400)){
+            await changeLight(1);
+        } else {
+            await changeLight(0);
+        }
+    }
+}
 
 
 const getVehicle = async (id) => {
@@ -352,17 +351,17 @@ const getVehicle = async (id) => {
 
 
 // frontend msg handler
-const frontEndHandleMessage = async (data, id) => {
+const frontEndHandleMessage = async (data) => {
+    console.log(`in frontend handler: ${JSON.stringify(data)}`);
     var vals;
     try {
         if (data?.type == 'set' || data?.type == 'get'){
-            vals = await getValues(data);
             switch (data?.type){
                 case 'set': 
-                    updateDB(vals, id);
+                    updateDB(data);
                     break;
                 case 'get':
-                    retrieveDB(vals, id);
+                    retrieveDB(data);
                     break;
             }
         }
@@ -373,95 +372,125 @@ const frontEndHandleMessage = async (data, id) => {
 }
 
 
-const updateDB = async (data, id) => {
-    try {
-        var vehicle;
-        var params;
+const updateDB = async (data) => {
+    console.log(`in update DB : ${JSON.stringify(data)}`);
+    console.log(`${data?.body?.req}  and   ${data?.body?.val}`)
+    if (data?.body?.req && data?.body?.val !== undefined){
+        console.log(`in the if statement`);
+        const route = data.body.req;
+        const value = data.body.val;
         try {
-            vehicle = await getVehicle(id);
-        } catch (error){
-            console.error(error);
-            return Error(error); 
-        }
-        switch (data?.req){
-            case 'parkMode':
-                if (data?.parkMode != undefined){
-                    params = {
-                        TableName: 'Vehicles',
-                        Key: {
-                            'vehicleID': {S: id}
-                        },
-                        ExpressionAttributeNames: {
-                            '#parkmode': "parkMode"
-                        },
-                        ExpressionAttributeValues: {
-                            ':newAttribute': { BOOL: data.parkMode }
-                        },
-                        ReturnValues: 'ALL_NEW',
-                        UpdateExpression: 'SET #parkmode = :newAttribute'
-                    };
+            const params = {
+                TableName: 'Vehicles',
+                Key: {
+                    'vehicleID': {S: data.id}
+                },
+                ExpressionAttributeValues: {
+                    ':newAttribute': { BOOL: value }
+                },
+                ReturnValues: 'ALL_NEW',
+                UpdateExpression: `SET ${route} = :newAttribute`
+            }; 
+            await dynamodbClient.send(new client_dynamodb_1.UpdateItemCommand(params));
+            //const output = await dynamodbClient.send(new client_dynamodb_1.PutItemCommand(params));
+            console.log(`modes from front-end updated`);
+            const msg = {
+                action: "msg", 
+                id: data.id,
+                type: data?.type,
+                body: {
+                    req: data?.req,
+                    val: value
                 }
-                break;
-            case 'lightMode':
-                if (data?.lightMode != undefined){
-                    params = {
-                        TableName: 'Vehicles',
-                        Key: {
-                            'vehicleID': {S: id}
-                        },
-                        ExpressionAttributeNames: {
-                            '#lightmode': "lightMode"
-                        },
-                        ExpressionAttributeValues: {
-                            ':newAttribute': { BOOL: data.lightMode }
-                        },
-                        ReturnValues: 'ALL_NEW',
-                        UpdateExpression: 'SET #lightmode = :newAttribute'
-                    };
-                }
-                break;
-            case 'autoMode': 
-            if (data?.autoMode != undefined){
-                params = {
-                    TableName: 'Vehicles',
-                    Key: {
-                        'vehicleID': {S: id}
-                    },
-                    ExpressionAttributeNames: {
-                        '#automode': "autoMode"
-                    },
-                    ExpressionAttributeValues: {
-                        ':newAttribute': { BOOL: data.autoMode }
-                    },
-                    ReturnValues: 'ALL_NEW',
-                    UpdateExpression: 'SET #automode = :newAttribute'
-                };
             }
-            break; 
+            sendMsg(connectionId, msg);
+
+            try {
+                await checkLights(data, data.id);
+            } catch (error){
+                console.error(`error checking lights: ${error}`);
+                return Error(error);
+            }
+        } catch (error) {
+            console.log(`error updating mode: ${error}`);
+            const msg = {
+                action: "msg", 
+                id: data.id,
+                type: data?.type,
+                body: {
+                    req: data?.req,
+                    val: !value
+                }
+            }
+            sendMsg(id, msg);
+            return Error(error)
         }
-        const output = await dynamodbClient.send(new client_dynamodb_1.PutItemCommand(params));
-        console.log(`modes from front-end updated: ${output}`);
-    } catch (error) {
-        console.error('Websocket incoming messages failed:', error);
-        return Error(error)
     }
 };
 
 
 
-const retrieveDB = async (data, id) => {
-    const vehicle = await getVehicle(id);
-    const val = vehicle?.Item[data?.req];
-    msg = {
+const retrieveDB = async (data) => {
+    if (data?.id && data?.body?.req){
+        const vehicle = await getVehicle(data.id);
+        const route = data.body.req;
+        if (route === 'getAll'){
+            return getAll(vehicle, data);
+        }
+        const val = vehicle?.Item[route];
+        const msg = {
+            action: "msg", 
+            id: data.id,
+            type: data.type,
+            body: {
+                req: route,
+                val: val
+            }
+        }
+        return sendMsg(connectionId, msg);
+    }
+};
+
+
+const getAll = async (vehicle, data) => {
+    const msg = {
         action: "msg", 
-        id: String(id),
-        type: data?.type,
-        req: data?.req,
-        value: val
-    }
-    return handleMsg("", msg);
-};
+        id: data.id,
+        type: data.type,
+        body: {
+            req: 'getAll',
+            value: {
+                'autoMode': vehicle?.Item?.autoMode?.BOOL || false,
+                'lightMode': vehicle?.Item?.lightMode?.BOOL || false,
+                'parkMode': vehicle?.Item?.parkMode?.BOOL || false,
+                'tempReading': {
+                    'temp': vehicle?.Item?.temperature?.S || 'nan',
+                    'humidity': vehicle?.Item?.humidity?.S || 'nan',
+                    'heat_index': vehicle?.Item?.heatIndex?.S || 'nan',
+                },
+                'gpsReading': {
+                    'lat': vehicle?.Item?.location?.latitude?.S || 'nan',
+                    'long': vehicle?.Item?.location?.longitude?.S || 'nan',
+                    'alt': vehicle?.Item?.location?.altitude?.S || 'nan',
+                    'speed': vehicle?.Item?.location?.speed?.S || 'nan'
+                },
+                'tempHistory': JSON.stringify(vehicle?.Item?.temperatureHistory.L),
+                'parkedLocation': {
+                    'lat': vehicle?.Item?.parkedLocation?.latitude?.S || 'nan',
+                    'long': vehicle?.Item?.parkedLocation?.longitude?.S || 'nan',
+                }
+            }
+        }
+    }   
 
+    try {
+        await sendMsg(connectionId, msg);
+        await checkLights(data, data.id);
+    } catch (error){
+        console.error(`error checking lights: ${error}`);
+        return Error(error);
+    }
+};
 
 
 

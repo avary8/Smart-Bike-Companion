@@ -18,9 +18,6 @@ import MapIcon from '@mui/icons-material/Map';
 import Popover from '@mui/material/Popover';
 import Typography from '@mui/material/Typography';
 import ReloadIcon from '@mui/icons-material/Cached';
-
-// import axios from '../api/backend.js';
-import axios from 'axios';
 import { light } from '@mui/material/styles/createPalette';
 import React from 'react';
 
@@ -49,28 +46,55 @@ function App() {
 
   const [userLoc, setUserLoc] = useState({});
 
-  sendJsonMessage({
-    action: "msg",
-    type: "cmd",
-    body: "hi"
-  });
+  /* parsed message: 
+  Object {
+    action: "msg"
+    connectionID: ""
+    deviceID: "189922615539556"
+    messageID: "1"
+    type: "output"
+​    body: { 
+      output: {
+        gpsReading: { 
+        alt: "nan"
+        lat: "nan"
+        long: "nan"
+        speed: "nan"
+      }
+      ​light: { 
+        val: "1232" 
+      }
+      tempReading: {
+        heat_index: "67"
+        humidity: "59"
+        temp: "68"
+      }
+    }
+  }
+*/
 
   useEffect(() => {
-    if (lastMessage === null){
+    if (lastMessage === null || lastMessage?.data === null){
       return;
     }
-
+    // console.log(JSON.parse(`lastmsg: ${lastMessage}`))
     const parsedMsg = JSON.parse(lastMessage.data) as MessageBody;
     console.log(parsedMsg);
-
-    // const parsedMessage = JSON.parse(JSON.stringify(lastMessage.toString()));
-
-    // console.log(parsedMessage);
-
-    // const parsedMsg = JSON.parse(lastMessage) as MessageBody;
-
-    //console.log(parsedMsg);
-  }, [lastMessage])
+    const type = parsedMsg?.type;
+    switch (type){
+      case 'output':
+        //setSensorReading('getAll', parsedMsg?.body?.value)
+        // const body = parsedMsg?.body?.output;
+        break;
+      case 'status':
+        break;
+      case 'set':
+      case 'get':
+        setSensorReading(parsedMsg?.body?.req, parsedMsg?.body?.value);
+        break;
+    }
+    
+  }, [lastMessage]);
 
 
 
@@ -98,10 +122,10 @@ function App() {
     return () => clearInterval(intervalId);
   }, [])
 
-  // // get all values when init
-  // useEffect(() => {
-  //   getSensorReading('getAll');
-  // }, []);
+  // get all values when init
+  useEffect(() => {
+    getSensorReading('getAll');
+  }, []);
 
 
   // uncomment when needed. this updates the light sensor value every x seconds
@@ -122,12 +146,16 @@ function App() {
 
   const getSensorReading = async (route: string) => {
     try {
-      const response = await axios.get(`${Route}/data/${route}/${tempID}`);
-      if (response?.data?.payload !== undefined){
-        setSensorReading(route, response.data.payload);
-      }
+      sendJsonMessage({
+        action: 'msg',
+        id: tempID,
+        type: 'get',
+        body: {
+          req: route
+        }
+      });
     } catch (error: any){
-      console.error(`Error getting ${Route}/${route}/${tempID} sensor data: `, error?.response?.data?.errMsg || error.message);
+      console.error(`Error getting database data: `, error?.response?.data?.errMsg || error.message);
     }
   }
 
@@ -143,9 +171,16 @@ function App() {
         setParkMode(payload);
         break;
       case 'tempReading':
+        if (payload?.temp === 'nan') payload.temp = tempReading.temp;
+        if (payload?.humidity === 'nan') payload.humidity = tempReading.humidity;
+        if (payload?.heat_index === 'nan') payload.heat_index = tempReading.heat_index;
         setTempReading(payload);
         break;
       case 'gpsReading':
+        if (payload?.lat === 'nan') payload.lat = GPSReading.lat;
+        if (payload?.long === 'nan') payload.long = GPSReading.long;
+        if (payload?.alt === 'nan') payload.alt = GPSReading.alt;
+        if (payload?.speed === 'nan') payload.speed = GPSReading.speed;
         setGPSReading(payload);
         break;
       case 'getAll':
@@ -160,16 +195,25 @@ function App() {
 
   const handleModeUpdate = (async (route: string) => {
     try {
+      var mode;
       if (route === 'autoMode' || route === 'lightMode' || route === 'parkMode'){
-        const response = await axios.put(`${Route}/data/${route}/${tempID}`);
-        console.log(response.data);
-        if (response?.data?.payload !== true || response?.data?.payload !== false){
-          console.log("in payload check")
-          await setSensorReading(route, response.data.payload);
-        }
+        if (route ==='autoMode') mode = !autoLightMode;
+        if (route ==='lightMode') mode = !lightMode;
+        if (route ==='parkMode') mode = !parkMode;
+        //const response = await axios.put(`${Route}/data/${route}/${tempID}`);
+        sendJsonMessage({
+          action: 'msg',
+          id: tempID,
+          type: 'set',
+          body: {
+            req: route,
+            val: mode
+          }
+        });
+        setSensorReading(route, mode);
       } 
     } catch (error: any){
-      console.error(`Error updating ${Route}/${route}/${tempID} sensor data: `, error?.response?.data?.errMsg || error.message);
+      console.error(`Error updating sensor data: ${error}`);
     }
   });
 
