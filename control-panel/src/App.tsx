@@ -20,14 +20,18 @@ import Typography from '@mui/material/Typography';
 import ReloadIcon from '@mui/icons-material/Cached';
 import { light } from '@mui/material/styles/createPalette';
 import React from 'react';
+import WarningIcon from '@mui/icons-material/Warning';
+import { AutoMode } from '@mui/icons-material';
+import Alert from '@mui/material/Alert';
+const textDecoder = new TextDecoder();
 
 type MessageBody = {
-  action: string
-  type: string
-  connectionID: string,
-  deviceID: string,
-  messageID: string,
-  body: unknown
+    action: string
+    type: string
+    connectionID: string,
+    deviceID: string,
+    messageID: string,
+    body: any
 };
 
 const tempID = '189922615539556';
@@ -39,12 +43,15 @@ function App() {
   const [tempReading, setTempReading] = useState({ temp: "67", humidity: "57", heat_index: "66" });
   const [GPSReading, setGPSReading] = useState({ lat: "29.650789", long: "-82.346568", alt: "nan", speed: "nan" });
 
-  const [parkMode, setParkMode] = useState(false);
+  const [parkMode, setParkMode] = useState(true);
   const [autoLightMode, setAutoLightMode] = useState(false);
   const [lightMode, setLightMode] = useState(false);
   const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null);
+  const [warning, setWarning] = useState(false);
+  const [alert, setAlert] = useState(false);
 
   const [userLoc, setUserLoc] = useState({});
+  const [parkedLocation, setParkedLocation] = useState({ lat: "29.650789", long: "-82.346568" });
 
   /* parsed message: 
   Object {
@@ -73,28 +80,44 @@ function App() {
   }
 */
 
-  useEffect(() => {
-    if (lastMessage === null || lastMessage?.data === null){
-      return;
-    }
-    // console.log(JSON.parse(`lastmsg: ${lastMessage}`))
-    const parsedMsg = JSON.parse(lastMessage.data) as MessageBody;
-    console.log(parsedMsg);
-    const type = parsedMsg?.type;
-    switch (type){
-      case 'output':
-        //setSensorReading('getAll', parsedMsg?.body?.value)
-        // const body = parsedMsg?.body?.output;
-        break;
-      case 'status':
-        break;
-      case 'set':
-      case 'get':
-        setSensorReading(parsedMsg?.body?.req, parsedMsg?.body?.value);
-        break;
-    }
+  // useEffect(() => {
+  //   if (lastMessage === null || !lastMessage?.data){
+  //     return;
+  //   }
+  //   var parsedMsg;
+  //   try {
+  //     parsedMsg = JSON.parse(lastMessage.data) as MessageBody;
+  //     console.log(parsedMsg);
+  //     // console.log('body: ')
+  //     // console.log(parsedMsg?.body)
+  //     // console.log('output: ')
+  //     // console.log(parsedMsg?.body?.output)
+  //     // console.log('temp: ')
+  //     // console.log(parsedMsg?.body?.output?.tempReading)
+
+  //   } catch (error){
+  //     console.error(`Error Parsing JSON: ${error}`);
+  //   }
+  //   const type = parsedMsg?.type;
+  //   const body = parsedMsg?.body;
+  //   switch (type){
+  //     case 'output':
+  //       if (body?.output?.gpsReading){
+  //         setSensorReading('gpsReading', body?.output?.gpsReading);
+  //       }
+  //       if (body?.output?.tempReading){
+  //         setSensorReading('tempReading', body?.output?.tempReading);
+  //       }
+  //       break;
+  //     case 'status':
+  //       break;
+  //     case 'set':
+  //     case 'get':
+  //       setSensorReading(body?.req, body?.value);
+  //       break;
+  //   }
     
-  }, [lastMessage]);
+  // }, [lastMessage]);
 
 
 
@@ -123,9 +146,9 @@ function App() {
   }, [])
 
   // get all values when init
-  useEffect(() => {
-    getSensorReading('getAll');
-  }, []);
+  // useEffect(() => {
+  //   getSensorReading('getAll');
+  // }, []);
 
 
   // uncomment when needed. this updates the light sensor value every x seconds
@@ -182,6 +205,14 @@ function App() {
         if (payload?.alt === 'nan') payload.alt = GPSReading.alt;
         if (payload?.speed === 'nan') payload.speed = GPSReading.speed;
         setGPSReading(payload);
+        checkPos();
+        break;
+      case 'parkedLocation':
+        if (parkMode === false){
+          if (payload?.lat === 'nan') payload.lat = parkedLocation.lat;
+          if (payload?.long === 'nan') payload.long = parkedLocation.long;
+          setParkedLocation(payload);
+        }
         break;
       case 'getAll':
         Object.entries(payload).forEach(([key, value]) => {
@@ -192,6 +223,16 @@ function App() {
     }
   });
 
+  const checkPos = (() =>{
+    if (parkMode === false){
+      return;
+    } 
+    if (Math.abs(parseFloat(GPSReading?.lat) - parseFloat(parkedLocation?.lat)) > 0.000135 || Math.abs(parseFloat(GPSReading?.long) - parseFloat(parkedLocation?.long)) > 0.000191){
+      setWarning(true);
+    } else {
+      setWarning(false);
+    }
+  });
 
   const handleModeUpdate = (async (route: string) => {
     try {
@@ -218,6 +259,7 @@ function App() {
   });
 
 
+
   const handleClick = (route: string) => async() => {
     await handleModeUpdate(route);
   };
@@ -233,11 +275,49 @@ function App() {
   const id = open ? 'simple-popover' : undefined;
 
 
+  // manual testing
+  const change = (val: any) => {
+    setGPSReading({
+      lat: `${parseFloat(GPSReading.lat) + val}`,
+      long: GPSReading.long,
+      alt: GPSReading.alt,
+      speed: GPSReading.speed
+    });
+    checkPos();
+  }
+
   return (
     <body className="App" style={{background: 'linear-gradient(to bottom, #3b1f5b, #192841)', color: 'rgb(230, 230, 230)'}}>
       <h2>hamburger menu maybe</h2>
 
+      {/* MANUAL TESTING */}
+
+      <Button onClick={() => change(0.0100)}>up</Button>
+      <Button onClick={() => change(-0.0100)}>down</Button>
+
+      lat: {GPSReading.lat} long: {GPSReading.long}
+      <br/>
+      orig: lat: 29.650789 long: -82.346568
+
+      <br/>
+
       {JSON.stringify(userLoc)}
+
+      {/* end of testing code */}
+
+      {/* fix this and add alert box too*/}
+      {warning && 
+        <Alert severity="warning" 
+          style={{ position: 'fixed', top: '0', left: '50%', transform: 'translateX(-50%)', zIndex: '1000', width: '100%', height: '15%', minHeight: '90px' }}
+          icon={<WarningIcon sx={{ fontSize: '10vh' }} />} 
+        >
+          <span style={{ fontSize: '3vw' }}>It appears your vehicle may be moving (threshold 10m)</span>
+        </Alert> 
+        
+      }
+
+    
+    
 
         {/* <div className="py-2">
         <label className="relative inline-flex items-center mb-5 cursor-pointer">

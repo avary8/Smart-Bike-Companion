@@ -103,8 +103,11 @@ void handleMsg(uint8_t* payload){
   const char* messageID = "1";
   //doc["body"]["messageID"];
 
+  char id[MSG_SIZE];
+  sprintf(id, "%" PRIu64 "", chipId);
+
   Serial.println("before contains type");
-  if (doc.containsKey("type")){
+  if (doc.containsKey("type") && doc.containsKey("deviceID") && strcmp(doc["deviceID"], id) == 0){
     if (!doc["type"].is<const char*>()) {
       //sendErrorMsg("invalid message type format", messageID);
       return;

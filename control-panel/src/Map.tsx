@@ -14,12 +14,6 @@ type Props = {
   }
 };
 
-const MapRefs = () => {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<maplibregl.Map | null>(null);
-  return { mapContainerRef, mapInstanceRef };
-}
-
 
 // const GetUserLoc = async() => {
 //   const { mapInstanceRef } = MapRefs();
@@ -34,8 +28,10 @@ const MapRefs = () => {
 
 
 const Map: React.FC<Props> = ({ vehicle }) => {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<maplibregl.Map | null>(null);
   const [mapInitialized, setMapInitialized] = useState(false);
-  const { mapContainerRef, mapInstanceRef } = MapRefs();
+
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
@@ -69,9 +65,9 @@ const Map: React.FC<Props> = ({ vehicle }) => {
   }, []);
 
   useEffect(() => {
-    if (mapInitialized && mapInstanceRef.current && vehicle.lat && vehicle.long) {
+    if (mapInitialized && mapInstanceRef.current && vehicle?.lat && vehicle?.long) {
       new maplibregl.Marker()
-        .setLngLat([parseFloat(vehicle.long), parseFloat(vehicle.lat)])
+        .setLngLat([parseFloat(vehicle.lat), parseFloat(vehicle.long)])
         .addTo(mapInstanceRef.current);
     }
   }, [vehicle, mapInitialized]);
@@ -87,6 +83,5 @@ const Map: React.FC<Props> = ({ vehicle }) => {
 
 export default {
   Map, 
-  MapRefs,
   //GetUserLoc
 }

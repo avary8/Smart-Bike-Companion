@@ -1,3 +1,128 @@
 
 
-new vehicle not being added to database rn 
+ok the latest: i think everything is working !! so back to front-end stuff 
+rightnow: working on warning and alert box
+- work on graphs i guess
+- cultivate a beautiful github
+- maybe post the frontend somewhere ??? idk though
+- put the other leds on the hardware and attach to a box or something 
+- prob just stop. i got other stuff to do
+
+stopped at 5:10 AM haha 
+
+
+
+
+
+
+
+
+
+
+
+i have no idea how i fixed that honestly. (below)
+i think i just commented the way to do it, messed around alot, uncommented, and then it started working at some point
+
+
+
+there's an error parsing the message and idk why !!!!!
+
+i think it's the quotes maybe .
+
+
+msg to send :: JSON.parse(data)
+
+{
+    "action": "msg",
+    "type": "output",
+    "connectionID": "",
+    "deviceID": "189922615539556",
+    "messageID": "1",
+    "body": {
+        "output": {
+            "light": {
+                "val": "1143"
+            },
+            "tempReading": {
+                "temp": "68",
+                "humidity": "60",
+                "heat_index": "68"
+            },
+            "gpsReading": {
+                "lat": "nan",
+                "long": "nan",
+                "alt": "nan",
+                "speed": "nan"
+            }
+        }
+    }
+}
+
+
+one that sends
+
+{
+    "action": "msg",
+    "id": "189922615539556",
+    "type": "get",
+    "body": {
+        "req": "getAll",
+        "value": {
+            "autoMode": false,
+            "lightMode": true,
+            "parkMode": false,
+            "tempReading": {
+                "temp": "69",
+                "humidity": "59",
+                "heat_index": "68"
+            },
+            "gpsReading": {
+                "lat": "nan",
+                "long": "nan",
+                "alt": "nan",
+                "speed": "nan"
+            },
+            "tempHistory": "[...]",
+            "parkedLocation": {
+                "lat": "nan",
+                "long": "nan"
+            }
+        }
+    }
+}
+
+
+Error Parsing JSON: SyntaxError: JSON.parse: unexpected character at line 1 column 1 of the JSON data 
+App@http://localhost:5173/src/App.tsx?t=1709362078835:44:19
+RenderedRoute@http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=c607bd97:3471:7
+Routes@http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=c607bd97:3903:7
+Router@http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=c607bd97:3851:7
+BrowserRouter@http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=c607bd97:4583:7 localhost:5173:13024:25
+    overrideMethod (index):13024
+    App App.tsx:86
+    React 13
+    protectedSetLastMessage use-websocket.ts:95
+    onmessage attach-listener.ts:46
+    (Async: EventHandlerNonNull)
+    bindMessageHandler attach-listener.ts:33
+    attachListeners attach-listener.ts:162
+    createOrJoinSocket create-or-join.ts:106
+    start_1 use-websocket.ts:110
+    step react-use-websocket.js:830
+    verb react-use-websocket.js:777
+    fulfilled react-use-websocket.js:748
+    (Async: promise callback)
+    step react-use-websocket.js:761
+    __awaiter react-use-websocket.js:763
+    __awaiter react-use-websocket.js:745
+    start_1 use-websocket.ts:90
+    useWebSocket use-websocket.ts:130
+    React 13
+    scheduleRefresh (index):9222
+    performReactRefresh @react-refresh:267
+    performReactRefresh @react-refresh:256
+    (Async: setTimeout handler)
+    debounce @react-refresh:666
+    __vite_plugin_react_timeout App.tsx:895
+    (Async: setTimeout handler)
+    <anonymous> App.tsx:893

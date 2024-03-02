@@ -22,14 +22,14 @@ var tempConns = {};
 const textEncoder = new util_1.TextEncoder();
 var connectionId = '';
 const handle = async (event) => {
-    console.log(event);
+    //console.log(event);
     connectionId = event?.requestContext?.connectionId;
     const routeKey = event?.requestContext?.routeKey || event?.action;
     var body = '';
-    if  (event?.body){
+    if (event?.body){
         body = JSON.parse(event?.body);
     }
-    const devID = body?.deviceID;
+    const devID = (body?.deviceID !== undefined ? body.deviceID.trim() : '');
     switch (routeKey) {
         case "$connect": // when client connects to websocket server
             // we will create a new client id in dynamoDB 
@@ -158,14 +158,15 @@ const handleMsg = async (body) => {
     }
     return responseOk;
 };
+
 const sendMsg = async (connectionId, body) => {
+    //console.log(`msg to send: ${JSON.stringify(body)}`)
     try {
         await apiGatewayMgmtApi.postToConnection({
             "ConnectionId": connectionId,
             "Data": textEncoder.encode(JSON.stringify(body))
         });
-    }
-    catch (e) {
+    } catch (e) {
         console.error(`error sending msg: ${e} : body: ${JSON.stringify(body)}`);
         if (e instanceof client_apigatewaymanagementapi_1.GoneException) {
             if (retries < MAX_RETRIES){
@@ -201,16 +202,16 @@ const getValues = async (doc) => {
 const handleMessage = async (data) => {
     var vals;
     try {
-        if (data?.type == 'output'){
+        if (data?.type == 'output' && data?.deviceID){
             vals = await getValues(data);   
-            handleESPdata(vals, data?.deviceID);
-            handleMsg(data);
+            await handleMsg(data);
+            await handleESPdata(vals, data.deviceID.trim()); 
         } else if (data?.type == 'status'){
             //vals = await getValues(data);
             await getValues(data);
             //return vals;
         } else {
-            frontEndHandleMessage(data);
+            await frontEndHandleMessage(data);
         }
     } catch (error) { 
         console.error(error);
@@ -269,21 +270,24 @@ const handleESPdata = async (data, id) => {
 
 
 
-const changeLight = async (val) => {
+const changeLight = async (id, val) => {
     try {
         const msg = {
             action: "msg", 
+            deviceID: id,
             type: 'setLight',
             body: {
                 value: val
             }
         }
-        return sendMsg(connectionId, msg);
+        await sendMsg(connectionId, msg);
+        return await handleMsg(msg);
     } catch (error) {
         console.error('Websocket changing light:', error?.errMsg || error?.message || 'Websocket outgoing messages failed');
         throw error;
     }
 };
+
 
 const checkLights = async(data, id) =>{
     var vehicle;
@@ -295,11 +299,13 @@ const checkLights = async(data, id) =>{
     }
 
     // light is on
-    if (vehicle?.Item?.lightMode){
-        await changeLight(1);
+    if (vehicle?.Item?.lightMode?.BOOL == true){
+        //console.log("lightMode on? is tripping");
+        return await changeLight(id, 1);
     // light is off, auto is off
-    } else if (!vehicle?.Item?.autoMode){
-        await changeLight(0);
+    } else if (!(vehicle?.Item?.autoMode?.BOOL == false)){
+        //console.log("autoMode off is tripping");
+        return await changeLight(id, 0);
     // light is off, auto is on
     } else {
         const currentDate = new Date();
@@ -311,7 +317,7 @@ const checkLights = async(data, id) =>{
         var darkOut = false;
         try {
             if(data?.gpsReading?.lat && data?.gpsReading?.long){
-                sun = await calcSun(data?.gpsReading?.lat, data?.gpsReading?.long)
+                sun = await SunCalc.getTimes(currentDate, data?.gpsReading?.lat, data?.gpsReading?.long)
                 if (hour <= sun.sunrise || hour >= sun.sunset){
                     darkOut = true;
                 }
@@ -322,9 +328,9 @@ const checkLights = async(data, id) =>{
         }
         
         if (darkOut || ((month > 10 || month < 4) && (hour > 17 || hour < 8)) || ((month < 11 || month > 3) && (hour > 18 || hour < 7)) || (lightSensorVal < 400)){
-            await changeLight(1);
+            return await changeLight(id, 1);
         } else {
-            await changeLight(0);
+            return await changeLight(id, 0);
         }
     }
 }
@@ -352,10 +358,12 @@ const getVehicle = async (id) => {
 
 // frontend msg handler
 const frontEndHandleMessage = async (data) => {
-    console.log(`in frontend handler: ${JSON.stringify(data)}`);
     var vals;
     try {
         if (data?.type == 'set' || data?.type == 'get'){
+            if (data?.id){
+                data.id = (data.id).trim()
+            }
             switch (data?.type){
                 case 'set': 
                     updateDB(data);
@@ -373,13 +381,14 @@ const frontEndHandleMessage = async (data) => {
 
 
 const updateDB = async (data) => {
-    console.log(`in update DB : ${JSON.stringify(data)}`);
-    console.log(`${data?.body?.req}  and   ${data?.body?.val}`)
-    if (data?.body?.req && data?.body?.val !== undefined){
-        console.log(`in the if statement`);
+    if (data?.id && data?.body?.req && data?.body?.val !== undefined){
         const route = data.body.req;
         const value = data.body.val;
         try {
+            // quick check
+            if (route === 'lightMode'){
+                await changeLight(data?.id, value);
+            } 
             const params = {
                 TableName: 'Vehicles',
                 Key: {
@@ -393,26 +402,48 @@ const updateDB = async (data) => {
             }; 
             await dynamodbClient.send(new client_dynamodb_1.UpdateItemCommand(params));
             //const output = await dynamodbClient.send(new client_dynamodb_1.PutItemCommand(params));
-            console.log(`modes from front-end updated`);
-            const msg = {
-                action: "msg", 
-                id: data.id,
-                type: data?.type,
-                body: {
-                    req: data?.req,
-                    val: value
+            var msg;
+            if (route == 'parkMode' && value === true){
+                const vehicle = await getVehicle(data.id);
+                msg = {
+                    action: "msg", 
+                    id: data.id,
+                    type: data?.type,
+                    body: {
+                        req: data?.req,
+                        val: {
+                            'parkedLocation': {
+                                'lat': vehicle?.Item?.parkedLocation?.latitude?.S || 'nan',
+                                'long': vehicle?.Item?.parkedLocation?.longitude?.S || 'nan',
+                            }
+                        }
+                    }
                 }
+            } else {
+                msg = {
+                    action: "msg", 
+                    id: data.id,
+                    type: data?.type,
+                    body: {
+                        req: data?.req,
+                        val: value
+                    }
+                } 
             }
             sendMsg(connectionId, msg);
+            
 
-            try {
-                await checkLights(data, data.id);
-            } catch (error){
-                console.error(`error checking lights: ${error}`);
-                return Error(error);
-            }
+            if (route === 'autoMode'){
+                try {
+                    await checkLights(data, data.id);
+                } catch (error){
+                    console.error(`error checking lights: ${error}`);
+                    return Error(error);
+                }
+            } 
+            
         } catch (error) {
-            console.log(`error updating mode: ${error}`);
+            console.error(`error updating mode: ${error}`);
             const msg = {
                 action: "msg", 
                 id: data.id,
@@ -422,7 +453,7 @@ const updateDB = async (data) => {
                     val: !value
                 }
             }
-            sendMsg(id, msg);
+            sendMsg(connectionId, msg);
             return Error(error)
         }
     }
@@ -491,7 +522,6 @@ const getAll = async (vehicle, data) => {
         return Error(error);
     }
 };
-
 
 
 
