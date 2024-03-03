@@ -4,39 +4,29 @@
   text-align: center;
 }
 
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.blur-background {
+  backdrop-filter: blur(5px);
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+.moving-icon {
+  transform: translateX(-50%) translateY(-50%);
+  animation: moveIcon 7s linear forwards;
+}
+
+@keyframes moveIcon {
+  0% {
+    transform: translateX(-50vw); 
   }
-  to {
-    transform: rotate(360deg);
+  40% {
+    transform: translateX(calc(100% + 100vw)); 
+  } 
+  41% {
+    transform: translateY(-30vh); 
+  } 
+  42% {
+    transform: translateX(0vw);
+  } 
+  100% {
+    transform: translateY(0vh); 
   }
 }
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
-

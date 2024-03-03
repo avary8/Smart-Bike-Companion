@@ -1,5 +1,5 @@
 import 'tailwindcss/tailwind.css';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./App.css";
 import useWebSocket from "react-use-websocket";
 import { Switch } from '@mui/base/Switch';
@@ -8,7 +8,12 @@ import AutoLightIcon from '@mui/icons-material/BrightnessAuto';
 import LightsOffIcon from '@mui/icons-material/Brightness1';
 import LightsOnIcon from '@mui/icons-material/LightMode';
 import Button from '@mui/material/Button';
-import Map from "./Map";
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import MapComponent from './components/Map';
+import AreaCharter from './components/AreaChart';
 import ThermoIcon from '@mui/icons-material/Thermostat';
 import WaterIcon from '@mui/icons-material/Water';
 import AltitudeIcon from '@mui/icons-material/Terrain';
@@ -20,9 +25,13 @@ import Typography from '@mui/material/Typography';
 import ReloadIcon from '@mui/icons-material/Cached';
 import { light } from '@mui/material/styles/createPalette';
 import React from 'react';
+import Backdrop from '@mui/material/Backdrop';
 import WarningIcon from '@mui/icons-material/Warning';
+import ErrorIcon from '@mui/icons-material/Error';
 import { AutoMode } from '@mui/icons-material';
 import Alert from '@mui/material/Alert';
+import { Area } from 'recharts';
+import BikeIcon from '@mui/icons-material/PedalBike';
 const textDecoder = new TextDecoder();
 
 type MessageBody = {
@@ -49,9 +58,16 @@ function App() {
   const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null);
   const [warning, setWarning] = useState(false);
   const [alert, setAlert] = useState(false);
+  const [showGraph, setShowGraph] = useState(false);
+  const [info1, setInfo1] = useState(false);
+  const [info2, setInfo2] = useState(false);
+  
+  const graph = useRef('');
 
   const [userLoc, setUserLoc] = useState({});
   const [parkedLocation, setParkedLocation] = useState({ lat: "29.650789", long: "-82.346568" });
+
+
 
   /* parsed message: 
   Object {
@@ -227,9 +243,15 @@ function App() {
     if (parkMode === false){
       return;
     } 
-    if (Math.abs(parseFloat(GPSReading?.lat) - parseFloat(parkedLocation?.lat)) > 0.000135 || Math.abs(parseFloat(GPSReading?.long) - parseFloat(parkedLocation?.long)) > 0.000191){
+
+    if (Math.abs(parseFloat(GPSReading?.lat) - parseFloat(parkedLocation?.lat)) > 0.000137 || Math.abs(parseFloat(GPSReading?.long) - parseFloat(parkedLocation?.long)) > 0.000137 ){
+      setWarning(false);
+      setAlert(true);
+    } else if (Math.abs(parseFloat(GPSReading?.lat) - parseFloat(parkedLocation?.lat)) > 0.0000824 || Math.abs(parseFloat(GPSReading?.long) - parseFloat(parkedLocation?.long)) > 0.0000824){
+      setAlert(false);
       setWarning(true);
     } else {
+      setAlert(false);
       setWarning(false);
     }
   });
@@ -259,20 +281,39 @@ function App() {
   });
 
 
-
   const handleClick = (route: string) => async() => {
     await handleModeUpdate(route);
   };
 
-  const handleInfoOpen = ((event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleInfoOpen = (num: number) => async(event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
-  });
+    if (num == 1){
+      setInfo1(true);
+    } else if (num == 2){
+      setInfo2(true);
+    }
+  };
 
   const handleClose = () => {
     setAnchorEl(null);
+    setInfo1(false);
+    setInfo2(false);
   };
   const open = Boolean(anchorEl);
   const id = open ? 'simple-popover' : undefined;
+
+
+  const handleDivClick = (route: string) => async() => {
+    if (route === 'Temperature' || route === 'Humidity' || route === 'Heat Index' || route === 'Altitude' || route === 'Speed'){
+      graph.current = route;
+      setShowGraph(true);
+    }  
+  };
+
+  const handleCloseGraph = async() => {
+    graph.current = '';
+    setShowGraph(false);
+  };
 
 
   // manual testing
@@ -287,13 +328,30 @@ function App() {
   }
 
   return (
-    <body className="App" style={{background: 'linear-gradient(to bottom, #3b1f5b, #192841)', color: 'rgb(230, 230, 230)'}}>
-      <h2>hamburger menu maybe</h2>
+    // orig gradient scheme: 'linear-gradient(to bottom, #3b1f5b, #192841)'
+    <body className="App" style={{background: 'linear-gradient(to bottom, #3d0e73, #160e73)', color: 'rgb(230, 230, 230)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+
+
+
+      <Dialog open={showGraph} onClose={handleCloseGraph}
+        slotProps={{ backdrop: { style: { backgroundColor: 'transparent' } } }} 
+        PaperProps={{ style:{ margin: '0', maxWidth: 'none', width: '80vw', height: '40vh', minHeight: '200px', backgroundColor: 'rgba(39, 39, 41, 0.99)', zIndex: '999' }, }} className='blur-background'>
+         <DialogTitle style={{ fontSize: '5vw', color: 'rgb(230, 230, 230)' }}>{`${graph.current}`} History</DialogTitle> 
+        <DialogContent  style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <AreaCharter/>
+        </DialogContent>
+      </Dialog>
+
+      
+
+      <BikeIcon sx={{ 
+        fontSize: '20vw', 
+        color: 'rgb(176, 176, 176)' }} className='moving-icon'/>
 
       {/* MANUAL TESTING */}
 
-      <Button onClick={() => change(0.0100)}>up</Button>
-      <Button onClick={() => change(-0.0100)}>down</Button>
+      <Button onClick={() => change(0.00004)}>up</Button>
+      <Button onClick={() => change(-0.01004)}>down</Button>
 
       lat: {GPSReading.lat} long: {GPSReading.long}
       <br/>
@@ -308,13 +366,24 @@ function App() {
       {/* fix this and add alert box too*/}
       {warning && 
         <Alert severity="warning" 
-          style={{ position: 'fixed', top: '0', left: '50%', transform: 'translateX(-50%)', zIndex: '1000', width: '100%', height: '15%', minHeight: '90px' }}
-          icon={<WarningIcon sx={{ fontSize: '10vh' }} />} 
+          style={{ backgroundColor: 'rgba(252, 229, 204, .93)', position: 'fixed', top: '0', left: '50%', transform: 'translateX(-50%)', zIndex: '1000', width: '100%', height: '15%', minHeight: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          icon={<WarningIcon sx={{ fontSize: '8vw' }} />} 
         >
-          <span style={{ fontSize: '3vw' }}>It appears your vehicle may be moving (threshold 10m)</span>
+          <span style={{ fontSize: '3vw' }}>It appears your vehicle may be moving (threshold 30ft)</span>
         </Alert> 
-        
       }
+
+      {alert && 
+        <Alert severity="error" 
+          style={{ backgroundColor: 'rgba(252, 204, 204, .93)', position: 'fixed', top: '0', left: '50%', transform: 'translateX(-50%)', zIndex: '1000', width: '100%', height: '15%', minHeight: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          icon={<ErrorIcon sx={{ fontSize: '8vw', color: 'rgb(156, 0, 0)' }} />} 
+        >
+          <span style={{ fontSize: '3vw' }}>It appears your vehicle is moving (threshold 50ft)</span>
+        </Alert> 
+      }
+
+
+      <AreaCharter></AreaCharter>
 
     
     
@@ -326,8 +395,9 @@ function App() {
         </label>
         </div> */}
 
-
-        <div style={{ borderRadius: '10px', width: '60vw', height: '10vw',  backgroundColor: 'rgba(161, 128, 196, 0.2)', display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', textAlign: 'center', alignItems: 'center' }}>
+        <div style={{ borderRadius: '10px', width: '60vw', height: '10vw',  backgroundColor: 'rgba(161, 128, 196, 0.2)', display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', textAlign: 'center', alignItems: 'center' }}
+          onClick={handleDivClick('Heat Index')}
+        >
           <span style={{ fontSize: '5vw' }}>
             Feels like {tempReading?.heat_index}&deg;F
           </span>
@@ -341,7 +411,10 @@ function App() {
           justifyContent: 'space-evenly',
           width: '100%'
         }}>
-          <div style={{ borderRadius: '10px', width: '40vw', height: '32vw', backgroundColor: 'rgba(161, 128, 196, 0.2)'}}>
+          
+          <div style={{ borderRadius: '10px', width: '40vw', height: '32vw', backgroundColor: 'rgba(161, 128, 196, 0.2)'}}
+            onClick={handleDivClick('Temperature')}
+          >
             <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
               <ThermoIcon sx={{ fontSize: '8vw', color: 'primary', marginTop: '.2vw', marginRight: '-1.6vw', marginLeft: '-1vw' }} />
               <span style={{ marginLeft: '-2.2vw', fontSize: '5vw' }}>Temperature<br/></span>
@@ -350,7 +423,9 @@ function App() {
             <span style={{ fontSize: '8vw' }}><br/>{tempReading?.temp}&deg;F</span>
           </div>
           
-          <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',   backgroundColor: 'rgba(161, 128, 196, 0.2)' }}>
+          <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',   backgroundColor: 'rgba(161, 128, 196, 0.2)' }} 
+            onClick={handleDivClick('Humidity')}
+          >
             <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
                 <WaterIcon sx={{ fontSize: '8vw', color: 'primary', marginRight: '-1.6vw', marginLeft: '-1.6vw' }} />
                 <span style={{ fontSize: '5vw', marginLeft: '-2.2vw' }}>Humidity<br/></span>
@@ -368,7 +443,9 @@ function App() {
           width: '100%'
         }}>
 
-        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw', backgroundColor: 'rgba(161, 128, 196, 0.2)' }}>
+        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw', backgroundColor: 'rgba(161, 128, 196, 0.2)' }}
+          onClick={handleDivClick('Altitude')}
+        >
           <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
             <AltitudeIcon sx={{ fontSize: '8vw', color: 'primary' }} />
             <span style={{ fontSize: '5vw', marginRight: '6vw' }}>Altitude</span>
@@ -381,7 +458,9 @@ function App() {
               )} 
         </div>
           
-        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',  backgroundColor: 'rgba(161, 128, 196, 0.2)' }}>
+        <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',  backgroundColor: 'rgba(161, 128, 196, 0.2)' }}
+          onClick={handleDivClick('Speed')}
+        >
           <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
             <SpeedIcon sx={{ fontSize: '8vw', color: 'primary' }} />
             <span style={{ fontSize: '5vw', marginRight: '6.4vw' }}>Speed</span>
@@ -408,13 +487,13 @@ function App() {
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', textAlign: 'center', alignItems: 'center', height: '100%' }}>
             <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
               <span style={{ fontSize: '5vw', marginLeft: '6vw' }}>Auto Lights</span>
-              <Button aria-describedby={id} onClick={handleInfoOpen}
+              <Button aria-describedby={id} onClick={handleInfoOpen(1)}
                 style={{ height: '3vw', width: '3vw', padding: '0px', borderWidth: '0px', margin: '0px', minWidth: 'unset', minHeight: 'unset', marginLeft: '3.5vw', color: 'rgb(230, 230, 230)' }}>
                 <InfoIcon sx={{ fontSize: '4vw', color: 'primary', marginTop: '-1.4vw' }}/>
               </Button>
               <Popover
                 id={id}
-                open={open}
+                open={info1}
                 anchorEl={anchorEl}
                 onClose={handleClose}
                 anchorOrigin={{
@@ -426,7 +505,7 @@ function App() {
               </Popover>
             </div>
 
-            <Button onClick={handleClick("autoMode")}>
+            <Button onClick={handleClick("autoMode")} style={{ backgroundColor: 'transparent', outline: 'none' }}>
               {autoLightMode ? (
                 <AutoLightIcon sx={{ fontSize: '20vw', color: 'primary' }} />
               ) : (
@@ -439,7 +518,7 @@ function App() {
         <div style={{ borderRadius: '10px', width: '40vw', height: '32vw',  backgroundColor: 'rgba(161, 128, 196, 0.2)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', textAlign: 'center', alignItems: 'center', height: '100%' }}>
             <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly' }}><span style={{ fontSize: '5vw' }}>Manual Lights</span></div>
-            <Button onClick={handleClick("lightMode")}>
+            <Button onClick={handleClick("lightMode")} style={{ backgroundColor: 'transparent', outline: 'none' }}>
               {lightMode ? (
                 <LightsOnIcon sx={{ fontSize: '20vw', color: 'yellow' }} />
               ) : (
@@ -457,13 +536,13 @@ function App() {
         <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly' }}>
         
           <span style={{ fontSize: '5vw' }}>Vehicle Location</span>
-          <Button aria-describedby={id} onClick={handleInfoOpen}
+          <Button aria-describedby={id} onClick={handleInfoOpen(2)}
                   style={{ height: '3vw', width: '3vw', padding: '0px', borderWidth: '0px', margin: '0px', minWidth: 'unset', minHeight: 'unset', marginLeft: '3.5vw', color: 'rgb(230, 230, 230)' }}>
             <InfoIcon sx={{ fontSize: '4vw', color: 'primary', marginTop: '-2.2vw' }}/>
           </Button>
           <Popover
             id={id}
-            open={open}
+            open={info2}
             anchorEl={anchorEl}
             onClose={handleClose}
             anchorOrigin={{
@@ -475,7 +554,7 @@ function App() {
           </Popover>
         </div>
 
-        <Button onClick={handleClick("parkMode")}>
+        <Button onClick={handleClick("parkMode")} style={{ backgroundColor: 'transparent', outline: 'none' }}>
             {parkMode ? (
               <ParkingIcon sx={{ fontSize: '20vw', color: 'primary' }} />
             ) : (
@@ -484,7 +563,7 @@ function App() {
           </Button>
           
           <div id="map-container" style={{width: '95%' }}>
-            <Map.Map vehicle={GPSReading} />
+              <MapComponent.Map vehicle={GPSReading} />
           </div>
       </div>
     </body>

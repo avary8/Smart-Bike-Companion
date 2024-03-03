@@ -7,7 +7,7 @@ import AutoLightIcon from '@mui/icons-material/BrightnessAuto';
 import LightsOffIcon from '@mui/icons-material/Brightness1';
 import LightsOnIcon from '@mui/icons-material/LightMode';
 import Button from '@mui/material/Button';
-import Map from "../Map";
+import Map from "../components/Map";
 
 
 function SignIn() {

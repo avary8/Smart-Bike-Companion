@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 //import Map, { NavigationControl } from "react-map-gl/maplibre";
-
+import '../../node_modules/maplibre-gl/dist/maplibre-gl.css';
 
 const apiKey = import.meta.env.VITE_MAP_API_KEY;
 const mapName = import.meta.env.VITE_MAP_NAME;
@@ -67,13 +67,13 @@ const Map: React.FC<Props> = ({ vehicle }) => {
   useEffect(() => {
     if (mapInitialized && mapInstanceRef.current && vehicle?.lat && vehicle?.long) {
       new maplibregl.Marker()
-        .setLngLat([parseFloat(vehicle.lat), parseFloat(vehicle.long)])
+        .setLngLat([parseFloat(vehicle.long), parseFloat(vehicle.lat)])
         .addTo(mapInstanceRef.current);
     }
   }, [vehicle, mapInitialized]);
 
   return <div ref={mapContainerRef} 
-              style={{ borderRadius: '10px', width: '82vw', height: '78vw', overflow: 'hidden' }}
+              style={{ borderRadius: '10px', width: '82vw', height: '78vw', overflow: 'hiden' }}
               onWheel={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
