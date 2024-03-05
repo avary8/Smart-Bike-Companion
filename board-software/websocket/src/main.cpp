@@ -17,6 +17,7 @@ DHT dht(TEMP_SENSOR_PIN, DHTTYPE);
 // define other light and sensor pins
 #define LIGHT_SENSOR_PIN 34
 #define LIGHT_BACK_PIN 32
+#define LIGHT_FRONT_PIN 33
 
 // define gps
 #define GPS_BAUDRATE 9600
@@ -41,34 +42,32 @@ WebSocketsClient wsClient;
 TinyGPSPlus gps;
 uint64_t chipId = ESP.getEfuseMac();
 
-std::string s;
-std::string connectionID = "";
 int lastVal = 100000;
 
 
-void sendErrorMsg(const char* error, const char* messageID){
+void sendErrorMsg(const char* error){
   char msg[MSG_SIZE];
 
-  sprintf(msg, "{\"action\":\"msg\",\"type\":\"error\",\"connectionID\":\"%s\",\"deviceID\":\" %" PRIu64 " \",\"messageID\":\"%s\",\"body\":{\"errMsg\":\"%s\"}}", connectionID.c_str(), chipId, messageID, error);
+  sprintf(msg, "{\"action\":\"msg\",\"type\":\"error\", \"deviceID\":\" %" PRIu64 " \", \"body\":{\"errMsg\":\"%s\"}}", chipId, error);
   wsClient.sendTXT(msg);
 }
 
-void sendSetMsg(const char* messageID, int val){
+void sendSetMsg(int val, int val2){
   char msg[MSG_SIZE];
-  sprintf(msg, "{\"action\":\"msg\",\"type\":\"status\",\"connectionID\":\"%s\",\"deviceID\":\"%" PRIu64 "\",\"messageID\":\"%s\",\"body\":{\"status\":{\"val\":\"%d\"}}}", connectionID.c_str(), chipId, messageID, val);
+  sprintf(msg, "{\"action\":\"msg\",\"type\":\"status\", \"deviceID\":\"%" PRIu64 "\", \"body\":{\"status\":{\"val\":\"%d\", \"val2\":\"%d\"}}}",  chipId, val, val2);
   wsClient.sendTXT(msg);
 }
 
-void sendGetMsg(const char* messageID, int val){
+void sendGetMsg(int val){
   char msg[MSG_SIZE];
-  sprintf(msg, "{\"action\":\"msg\",\"type\":\"output\",\"connectionID\":\"%s\",\"deviceID\":\"%" PRIu64 "\",\"messageID\":\"%s\",\"body\":{\"output\":{\"val\":\"%d\"}}}", connectionID.c_str(), chipId, messageID, val);
+  sprintf(msg, "{\"action\":\"msg\",\"type\":\"output\", \"deviceID\":\"%" PRIu64 "\", \"body\":{\"output\":{\"val\":\"%d\"}}}", chipId, val);
   wsClient.sendTXT(msg);
 }
 
-void sendData(const char* messageID, const char* data, int more) {
+void sendData(const char* data, int more) {
   Serial.println("in send tempdata");
   char msg[MSG_SIZE*more];
-  sprintf(msg, "{\"action\":\"msg\",\"type\":\"output\",\"connectionID\":\"%s\",\"deviceID\":\"%" PRIu64 "\",\"messageID\":\"%s\",\"body\":{\"output\":{%s}}}", connectionID.c_str(), chipId, messageID, data);
+  sprintf(msg, "{\"action\":\"msg\",\"type\":\"output\", \"deviceID\":\"%" PRIu64 "\", \"body\":{\"output\":{%s}}}", chipId, data);
   Serial.println(msg);
   wsClient.sendTXT(msg);
 }
@@ -90,18 +89,17 @@ void handleMsg(uint8_t* payload){
   if (error) {
     //Serial.print(F("deserializeJson() failed: "));
     //Serial.println(error.f_str());
-    //const char* messageID = "-1";
-    //sendErrorMsg(error.c_str(), messageID);
+    //const char*   = "-1";
+    //sendErrorMsg(error.c_str(),  );
     return;
   }
 
-  // if (!doc.containsKey("messageID")){
-  //   sendErrorMsg("messageID missing", "-1");
+  // if (!doc.containsKey(" ")){
+  //   sendErrorMsg("  missing", "-1");
   //   return;
   // }
 
-  const char* messageID = "1";
-  //doc["body"]["messageID"];
+  //doc["body"][" "];
 
   char id[MSG_SIZE];
   sprintf(id, "%" PRIu64 "", chipId);
@@ -109,26 +107,16 @@ void handleMsg(uint8_t* payload){
   Serial.println("before contains type");
   if (doc.containsKey("type") && doc.containsKey("deviceID") && strcmp(doc["deviceID"], id) == 0){
     if (!doc["type"].is<const char*>()) {
-      //sendErrorMsg("invalid message type format", messageID);
+      //sendErrorMsg("invalid message type format",  );
       return;
     }
 
     if (!doc["body"].is<JsonObject>()){
-      //sendErrorMsg("invalid command body", messageID);
+      //sendErrorMsg("invalid command body",  );
       return;
     }
 
     const char* operation = doc["type"];
-
-    // receive connectionID
-    if (strcmp(operation, "connectionID") == 0){
-      const char* temp = doc["body"];
-      std::string str(temp);
-      connectionID = str;
-      Serial.print("temp: ");
-      Serial.println(temp);
-      return;
-    }
 
     if (strcmp(operation, "getAll") == 0){
       // get photo sensor val
@@ -146,7 +134,7 @@ void handleMsg(uint8_t* payload){
 
       float hif = dht.computeHeatIndex(fahrenheit, humidity);
 
-      std:: string tempVals = "\"tempReading\":{\"temp\":\"" + std::to_string(int(fahrenheit)) + "\",\"humidity\":\"" + std::to_string(int(humidity)) + "\",\"heat_index\":\"" + std::to_string(int(hif)) + "\"}";
+      std:: string tempVals = "\"tempReading\":{\"temp\":\"" + std::to_string(int(fahrenheit)) + "\",\"humidity\":\"" + std::to_string(int(humidity)) + "\",\"heatIndex\":\"" + std::to_string(int(hif)) + "\"}";
 
       // get gps vals
       std:: string gpsVals = "\"gpsReading\":{";
@@ -172,22 +160,24 @@ void handleMsg(uint8_t* payload){
       } 
 
       std::string allVals = photoVal + "," + tempVals + "," + gpsVals;
-      sendData(messageID, allVals.c_str(), 2);
+      sendData(allVals.c_str(), 2);
       return;
     }
 
     // set lights
     if (strcmp(operation, "setLight") == 0){
       digitalWrite(LIGHT_BACK_PIN, doc["body"]["value"]);
+      digitalWrite(LIGHT_FRONT_PIN, doc["body"]["value"]);
       int val = digitalRead(LIGHT_BACK_PIN);
-      sendSetMsg(messageID, val);
+      int val2 = digitalRead(LIGHT_FRONT_PIN);
+      sendSetMsg(val, val2);
       return;
     }
 
     // get photo sensor value
     if (strcmp(operation, "getPhoto") == 0){
       auto val = analogRead(LIGHT_SENSOR_PIN);
-      sendGetMsg(messageID, val);
+      sendGetMsg(val);
       return;
     }
 
@@ -209,7 +199,7 @@ void handleMsg(uint8_t* payload){
 
       Serial.println("before stringing temp");
 
-      tempVals += "\"temp\":\"" + std::to_string(int(fahrenheit)) + "\",\"humidity\":\"" + std::to_string(int(humidity)) + "\",\"heat_index\":\"" + std::to_string(int(hif)) + "\"}";
+      tempVals += "\"temp\":\"" + std::to_string(int(fahrenheit)) + "\",\"humidity\":\"" + std::to_string(int(humidity)) + "\",\"heatIndex\":\"" + std::to_string(int(hif)) + "\"}";
 
       
       // // Read temperature as Celsius (the default)
@@ -219,7 +209,7 @@ void handleMsg(uint8_t* payload){
 
       
       Serial.println("before sendtempdate");
-      sendData(messageID, tempVals.c_str(), 1);
+      sendData(tempVals.c_str(), 1);
       return;
     }
 
@@ -247,9 +237,9 @@ void handleMsg(uint8_t* payload){
         } else {
           gpsVals += "\"speed\":\"nan\"}";
         }
-        sendData(messageID, gpsVals.c_str(), 1);
+        sendData(gpsVals.c_str(), 1);
       } else {
-        sendErrorMsg("Unable to retrieve GPS data", messageID);
+        sendErrorMsg("Unable to retrieve GPS data");
       }
       return;
     }
@@ -258,7 +248,7 @@ void handleMsg(uint8_t* payload){
     if (strcmp(operation, "getDeviceId") == 0){
       char msg[MSG_SIZE];
       Serial.println("before sprintf");
-      sprintf(msg, "{\"action\":\"msg\",\"type\":\"connection\",\"messageID\":\"%s\",\"id\":\"%" PRIu64 "\"}", messageID, chipId);
+      sprintf(msg, "{\"action\":\"msg\",\"type\":\"connection\", \"id\":\"%" PRIu64 "\"}",  chipId);
 
       Serial.println("before sentTXT");
       wsClient.sendTXT(msg);
@@ -266,41 +256,14 @@ void handleMsg(uint8_t* payload){
     }
 
     //Serial.println("unsupported type request");
-    //sendErrorMsg("unsupported type request", messageID);
+    //sendErrorMsg("unsupported type request",  );
     return;
   }
   //Serial.println("unsupported message type (! have type)");
-  //sendErrorMsg("unsupported message type (! have type)", messageID);
+  //sendErrorMsg("unsupported message type (! have type)",  );
   return;
 }
 
-std::string getGPS(){
-  std:: string gpsVals = "\"gpsReading\":{";
-
-  if (Serial2.available()){
-    gps.encode(Serial2.read());
-    if (gps.location.isValid()){
-      gpsVals += "\"lat\":\"" + std::to_string(gps.location.lat()) + "\",\"long\":\"" + std::to_string(gps.location.lng()) + "\",";
-      Serial.println(gpsVals.c_str());
-    } else {
-      gpsVals += "\"lat\":\"nan\",\"long\":\"nan\",";
-    }
-    if (gps.altitude.isValid()){
-      gpsVals += "\"alt\":\"" + std::to_string(gps.altitude.feet()) + "\",";
-      Serial.println(gpsVals.c_str());
-    } else {
-      gpsVals += "\"alt\":\"nan\",";
-    }
-            
-    if (gps.speed.isValid()) {
-      gpsVals += "\"speed\":\"" + std::to_string(int(gps.speed.mph())) + "\"}";
-      Serial.println(gpsVals.c_str());
-    } else {
-      gpsVals += "\"speed\":\"nan\"}";
-    }
-  } 
-  return gpsVals;
-}
 
 
 void onWSEvent(WStype_t type, uint8_t* payload, size_t length){
@@ -335,6 +298,11 @@ void onWSEvent(WStype_t type, uint8_t* payload, size_t length){
   
 }
 
+
+void connectToWiFi();
+void getAll();
+unsigned long lastGetAllTime = 0; 
+
 void setup() {
   Serial.begin(921600);
   Serial2.begin(GPS_BAUDRATE, SERIAL_8N1, RXD2, TXD2);
@@ -345,8 +313,10 @@ void setup() {
   wifiMulti.addAP(WIFI_SSID, WIFI_PASSWORD);
 
   pinMode(LIGHT_BACK_PIN, OUTPUT);
+  pinMode(LIGHT_FRONT_PIN, OUTPUT);
 
   while (wifiMulti.run() != WL_CONNECTED) {
+    connectToWiFi();
     delay(100);
   }
 
@@ -355,12 +325,12 @@ void setup() {
   wsClient.onEvent(onWSEvent);
 }
 
-
-void getAll();
-unsigned long lastGetAllTime = 0; 
-
 void loop() {
-   unsigned long currentTime = millis();  // Get the current time
+  if (WiFi.status() != WL_CONNECTED) {
+    connectToWiFi();
+  }
+
+  unsigned long currentTime = millis();  // Get the current time
 
   if (currentTime - lastGetAllTime >= 15000) {
       getAll();
@@ -371,6 +341,19 @@ void loop() {
 }
 
 
+void connectToWiFi() {
+  WiFi.disconnect(true); // Disconnect from any previous connections
+  int numNetworks = WiFi.scanNetworks(); 
+  if (numNetworks == 0) {
+    return;
+  }
+
+  for (int i = 0; i < numNetworks; i++) {
+    if (WiFi.begin(WiFi.SSID(i).c_str(), "") == WL_CONNECTED) {
+      return;
+    }
+  }
+}
 
 void getAll(){
   // get photo sensor val
@@ -388,7 +371,7 @@ void getAll(){
 
   float hif = dht.computeHeatIndex(fahrenheit, humidity);
 
-  std:: string tempVals = "\"tempReading\":{\"temp\":\"" + std::to_string(int(fahrenheit)) + "\",\"humidity\":\"" + std::to_string(int(humidity)) + "\",\"heat_index\":\"" + std::to_string(int(hif)) + "\"}";
+  std:: string tempVals = "\"tempReading\":{\"temp\":\"" + std::to_string(int(fahrenheit)) + "\",\"humidity\":\"" + std::to_string(int(humidity)) + "\",\"heatIndex\":\"" + std::to_string(int(hif)) + "\"}";
 
   // get gps vals
   std:: string gpsVals = "\"gpsReading\":{";
@@ -412,8 +395,7 @@ void getAll(){
       gpsVals += "\"speed\":\"nan\"}";
     }
   } 
-  const char* messageID = "1";
   std::string allVals = photoVal + "," + tempVals + "," + gpsVals;
-  sendData(messageID, allVals.c_str(), 2);
+  sendData(allVals.c_str(), 2);
   return;
 }

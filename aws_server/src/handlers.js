@@ -71,21 +71,20 @@ const handle = async (event) => {
                                         'speed': {S: 'nan'}
                                     }},
                                     'temperature': { S: 'nan' },
-                                    'temperatureHistory': { L: [
+                                    'humidity': { S: 'nan' },
+                                    'heatIndex': { S: 'nan' },
+                                    'history': { L: [
                                         {
-                                            "M": {
-                                                "temp": {S: ''},
-                                                "date": {S: ''}
+                                            'M': {
+                                                'temp': {S: ''},
+                                                'humidity': {S: ''},
+                                                'heatIndex': {S: ''},
+                                                'altitude': {S: ''},
+                                                'speed': {S: ''},
+                                                'date': {S: ''}
                                               }
                                         }
-                                          // or 
-                                        // {S: ''} // list of stringified jsons ? 
-                                        // or 
-                                        // 'time': { NULL: true},
-                                        // 'value': {Null: true},
                                     ]},
-                                    'humidity': { S: 'nan' },
-                                    'heatIndex': { S: 'nan' }
                                 }
                         }));
                         tempConns[event.deviceID] = true;
@@ -234,16 +233,21 @@ const handleESPdata = async (data, id) => {
                 '#L': 'location' // location is reserved word
             },
             ExpressionAttributeValues: {
-                ':temphist': { L : [{
-                    'M': {
-                        'temp': { S: data?.tempReading?.temp },
-                        'date': { S: date.toISOString() }
+                ':temphist': { L: [
+                    {
+                        'M': {
+                            'temp': {S: data?.tempReading?.temp },
+                            'humidity': {S: data?.tempReading?.humidity },
+                            'heatIndex': {S: data?.tempReading?.heatIndex },
+                            'altitude': {S: data?.gpsReading?.alt },
+                            'speed': {S: data?.gpsReading?.speed },
+                            'date': {S: date.toISOString() }
+                          }
                     }
-
-                }]},
+                ]},
                 ':T': { S: data?.tempReading?.temp },
                 ':hum': { S: data?.tempReading?.humidity },
-                ':heat': { S: data?.tempReading?.heat_index },
+                ':heat': { S: data?.tempReading?.heatIndex },
                 ':loc': { M: {
                     'latitude': { S: data?.gpsReading?.lat },
                     'longitude': { S: data?.gpsReading?.long },
@@ -252,7 +256,7 @@ const handleESPdata = async (data, id) => {
                 }},
             },
             ReturnValues: 'ALL_NEW',
-            UpdateExpression: 'SET temperatureHistory=list_append(temperatureHistory, :temphist), temperature = :T, humidity=:hum, heatIndex=:heat, #L=:loc',
+            UpdateExpression: 'SET temperature = :T, humidity=:hum, heatIndex=:heat, #L=:loc , history=list_append(history, :temphist)'
         };
         await dynamodbClient.send(new client_dynamodb_1.UpdateItemCommand(params));
 
@@ -303,7 +307,7 @@ const checkLights = async(data, id) =>{
         //console.log("lightMode on? is tripping");
         return await changeLight(id, 1);
     // light is off, auto is off
-    } else if (!(vehicle?.Item?.autoMode?.BOOL == false)){
+    } else if (vehicle?.Item?.autoMode?.BOOL == false){
         //console.log("autoMode off is tripping");
         return await changeLight(id, 0);
     // light is off, auto is on
@@ -497,7 +501,7 @@ const getAll = async (vehicle, data) => {
                 'tempReading': {
                     'temp': vehicle?.Item?.temperature?.S || 'nan',
                     'humidity': vehicle?.Item?.humidity?.S || 'nan',
-                    'heat_index': vehicle?.Item?.heatIndex?.S || 'nan',
+                    'heatIndex': vehicle?.Item?.heatIndex?.S || 'nan',
                 },
                 'gpsReading': {
                     'lat': vehicle?.Item?.location?.latitude?.S || 'nan',
@@ -505,7 +509,7 @@ const getAll = async (vehicle, data) => {
                     'alt': vehicle?.Item?.location?.altitude?.S || 'nan',
                     'speed': vehicle?.Item?.location?.speed?.S || 'nan'
                 },
-                'tempHistory': JSON.stringify(vehicle?.Item?.temperatureHistory.L),
+                'history': JSON.stringify(vehicle?.Item?.history.L),
                 'parkedLocation': {
                     'lat': vehicle?.Item?.parkedLocation?.latitude?.S || 'nan',
                     'long': vehicle?.Item?.parkedLocation?.longitude?.S || 'nan',

@@ -32,6 +32,10 @@ import { AutoMode } from '@mui/icons-material';
 import Alert from '@mui/material/Alert';
 import { Area } from 'recharts';
 import BikeIcon from '@mui/icons-material/PedalBike';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
 const textDecoder = new TextDecoder();
 
 type MessageBody = {
@@ -49,8 +53,8 @@ const Route = "http://localhost:3500"
 function App() {
   const { readyState, lastMessage, sendMessage, sendJsonMessage } = useWebSocket(import.meta.env.VITE_WEBSOCKET_ADDRESS);
 
-  const [tempReading, setTempReading] = useState({ temp: "67", humidity: "57", heat_index: "66" });
-  const [GPSReading, setGPSReading] = useState({ lat: "29.650789", long: "-82.346568", alt: "nan", speed: "nan" });
+  const [tempReading, setTempReading] = useState({ temp: "67", humidity: "57", heatIndex: "66" });
+  const [GPSReading, setGPSReading] = useState({ lat: "29.650789", long: "-82.346568", alt: 'nan', speed: 'nan' });
 
   const [parkMode, setParkMode] = useState(true);
   const [autoLightMode, setAutoLightMode] = useState(false);
@@ -61,8 +65,15 @@ function App() {
   const [showGraph, setShowGraph] = useState(false);
   const [info1, setInfo1] = useState(false);
   const [info2, setInfo2] = useState(false);
+
+  const [graphDisplay, setGraphDisplay] = useState(0);
+  const handleChange = (event: SelectChangeEvent) => {
+    setGraphDisplay(event.target.value);
+  };
+
   
   const graph = useRef('');
+  const history = useRef('[{"M":{"heatIndex":{"S":""},"date":{"S":""},"humidity":{"S":""},"altitude":{"S":""},"temp":{"S":""},"speed":{"S":""}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:00:55.891Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:01:10.935Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:01:25.879Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:01:40.959Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:01:55.887Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:02:10.884Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:02:25.872Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:02:40.894Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:02:55.875Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:03:10.896Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:03:25.873Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:03:40.873Z"},"humidity":{"S":"58"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:03:55.875Z"},"humidity":{"S":"57"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:04:10.877Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:04:28.215Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:04:43.202Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:04:58.207Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:05:29.655Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:05:44.642Z"},"humidity":{"S":"55"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:05:59.614Z"},"humidity":{"S":"55"},"altitude":{"S":"nan"},"temp":{"S":"70"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:06:14.631Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"70"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:06:29.644Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"70"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:06:44.604Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"70"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:06:59.606Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"70"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:07:14.618Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"70"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:07:29.619Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"69"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:07:44.610Z"},"humidity":{"S":"57"},"altitude":{"S":"nan"},"temp":{"S":"69"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:07:59.619Z"},"humidity":{"S":"57"},"altitude":{"S":"nan"},"temp":{"S":"69"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:08:14.615Z"},"humidity":{"S":"57"},"altitude":{"S":"nan"},"temp":{"S":"69"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:08:29.624Z"},"humidity":{"S":"57"},"altitude":{"S":"nan"},"temp":{"S":"69"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:08:44.617Z"},"humidity":{"S":"57"},"altitude":{"S":"nan"},"temp":{"S":"69"},"speed":{"S":"nan"}}}]');
 
   const [userLoc, setUserLoc] = useState({});
   const [parkedLocation, setParkedLocation] = useState({ lat: "29.650789", long: "-82.346568" });
@@ -198,6 +209,8 @@ function App() {
     }
   }
 
+
+
   const setSensorReading = (async (path: string, payload: any) => {
     switch(path){
       case 'autoMode':
@@ -212,7 +225,7 @@ function App() {
       case 'tempReading':
         if (payload?.temp === 'nan') payload.temp = tempReading.temp;
         if (payload?.humidity === 'nan') payload.humidity = tempReading.humidity;
-        if (payload?.heat_index === 'nan') payload.heat_index = tempReading.heat_index;
+        if (payload?.heatIndex === 'nan') payload.heatIndex = tempReading.heatIndex;
         setTempReading(payload);
         break;
       case 'gpsReading':
@@ -229,6 +242,9 @@ function App() {
           if (payload?.long === 'nan') payload.long = parkedLocation.long;
           setParkedLocation(payload);
         }
+        break;
+      case 'history': 
+        history.current = payload.history;
         break;
       case 'getAll':
         Object.entries(payload).forEach(([key, value]) => {
@@ -331,14 +347,64 @@ function App() {
     // orig gradient scheme: 'linear-gradient(to bottom, #3b1f5b, #192841)'
     <body className="App" style={{background: 'linear-gradient(to bottom, #3d0e73, #160e73)', color: 'rgb(230, 230, 230)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
 
-
-
       <Dialog open={showGraph} onClose={handleCloseGraph}
         slotProps={{ backdrop: { style: { backgroundColor: 'transparent' } } }} 
         PaperProps={{ style:{ margin: '0', maxWidth: 'none', width: '80vw', height: '40vh', minHeight: '200px', backgroundColor: 'rgba(39, 39, 41, 0.99)', zIndex: '999' }, }} className='blur-background'>
-         <DialogTitle style={{ fontSize: '5vw', color: 'rgb(230, 230, 230)' }}>{`${graph.current}`} History</DialogTitle> 
+         <DialogTitle style={{ fontSize: '5vw', color: 'rgb(230, 230, 230)' }}>
+          <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center' }}>
+
+            <span style={{ fontSize: '5vw', marginLeft: '6vw' }}>
+              {`${graph.current}`} History
+            </span>
+
+            <FormControl style={{ minWidth: '80px', height: '3vw', width: '10vw', padding: '0px', borderWidth: '0px', margin: '0px', minHeight: 'unset', marginLeft: '3.5vw', color: 'rgb(230, 230, 230)', borderColor: 'rgb(230, 230, 230)' }}>
+            <InputLabel id="demo-simple-select-autowidth-label" style={{ color: 'rgb(230, 230, 230)' }}>Set Interval</InputLabel>
+            <Select
+              labelId="select-filter-by-field-labe;"
+              id="select-filter-by-field"
+              value={graphDisplay}
+              onChange={handleChange}
+              autoWidth
+              label="Interval"
+              sx={{
+                color: 'rgb(230, 230, 230)',
+                '.MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'rgba(230, 230, 230, 0.25)',
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#8b5cf6',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#8b5cf6',
+                },
+                '.MuiSvgIcon-root ': {
+                  fill: 'white !important',
+                }
+              }}
+              MenuProps={{
+                PaperProps: {
+                  style: {
+                    backgroundColor: 'rgb(39, 39, 41)',
+                    color: 'rgb(230, 230, 230)',
+                  },
+                },
+              }}
+            >
+
+              <MenuItem value={0}>
+                <em>All</em>
+              </MenuItem>
+              <MenuItem value={1}>Last 24 Hours</MenuItem>
+              <MenuItem value={2}>Last Week</MenuItem>
+              <MenuItem value={3}>Last Month</MenuItem>
+              <MenuItem value={4}>Last 6 Months</MenuItem>
+              <MenuItem value={5}>Last Year</MenuItem>
+            </Select>
+            </FormControl>
+          </div>
+        </DialogTitle> 
         <DialogContent  style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <AreaCharter/>
+            <AreaCharter data={{ graph: graph.current, history: history.current, graphInterval: graphDisplay }}/>
         </DialogContent>
       </Dialog>
 
@@ -382,9 +448,6 @@ function App() {
         </Alert> 
       }
 
-
-      <AreaCharter></AreaCharter>
-
     
     
 
@@ -399,7 +462,7 @@ function App() {
           onClick={handleDivClick('Heat Index')}
         >
           <span style={{ fontSize: '5vw' }}>
-            Feels like {tempReading?.heat_index}&deg;F
+            Feels like {tempReading?.heatIndex}&deg;F
           </span>
         </div>
 
