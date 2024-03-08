@@ -48,7 +48,7 @@ My project was designed with the goal to provide conveniences to bikes and scoot
 
 
 # Project Timeline
-- Month 1- Finalize idea and begin researching and experimenting with hardware
+- Month 1 - Finalize idea and begin researching and experimenting with hardware
 - Month 2 - Collecting needed hardware. Beginning ESP32, front-end, and WebSocket development and testing
 - Month 3 - More back-end development along with database involvement
 - Month 4 - Testing the integration of all components and preparing reports

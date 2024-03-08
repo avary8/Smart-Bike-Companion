@@ -13,7 +13,6 @@
 - [Challenges Faced](#challenges-faced)
 - [Future Work](#future-work)
 - [Conclusion](#conclusion)
-- [References](#references)
 
 
 # Executive Summary
@@ -45,7 +44,8 @@ I opted for WebSocket over HTTP due to its continuous open channels, essential f
 - Temperature/Humidity sensor (DHT11)
 - GPS (NEO-6M)
 - LEDs
-- wires, resistors, breadboard
+- wires, resistors, breadboard  
+
 ### Software
 - PlatformIO
 - Vite + React
@@ -60,11 +60,13 @@ I opted for WebSocket over HTTP due to its continuous open channels, essential f
 ### Front-end
 - A control panel was created to display all information to users
 - A map indicating the user's location and vehicle's location
-- Toggles to control different modes
+- Toggles to control different modes  
+
 ### Modes
 - Automatic Light Mode - when activated, lights will turn on automatically when it is dark outside or night time hours
 - Manual Light Mode - when activated, lights will turn on no matter the time or brightness
-- Parking Mode (GPS Monitoring) - when activated, the vehicle's gps location will be saved, the live monitoring will begin, and if the vehicle's newly recorded coordinates begin to move drastically, alerts will be issued for the user. If a user forgets to turn off this mode, this mode will automatically detect if a user is nearby and likely with the vehicle.
+- Parking Mode (GPS Monitoring) - when activated, the vehicle's gps location will be saved, the live monitoring will begin, and if the vehicle's newly recorded coordinates begin to move drastically, alerts will be issued for the user. If a user forgets to turn off this mode, this mode will automatically detect if a user is nearby and likely with the vehicle.  
+  
 ### Sensors and Graphs
 - Sensors Recorded and all old values are available to view through graphs on the front-end
   - Temperature
@@ -72,20 +74,24 @@ I opted for WebSocket over HTTP due to its continuous open channels, essential f
   - Heat Index
   - Altitude
   - Speed
-- Graphs have capability of selecting pre-set intervals to display data (such as 'last 24 hours')
+- Graphs have capability of selecting pre-set intervals to display data (such as 'last 24 hours')  
+  
 ### Database and WebSocket
 - Due to the use of a database, all information persists regardless of whether the ESP32 or front-end are live -- this means all mode values and sensor data (including parked location)
 - The WebSocket connection allows for a quick always-open line of communication between the front-end, back-end, and esp32.
 
 ## Technical Description
 ### ESP32
-In order to properly test and develop the ESP32 and adjacent hardware, I used PlatformIO on VSCode. On startup, the ESP32 will try to connect to the campus wifi or if it is unable to, simply any wifi. Following that, it will attempt to connect to the WebSocket that I have set up. Lastly, the WebSocket connection will remain open in order to listen for commands from the back-end, and to send sensor data from the esp32 which will collect and send it automatically.
+In order to properly test and develop the ESP32 and adjacent hardware, I used PlatformIO on VSCode. On startup, the ESP32 will try to connect to the campus wifi or if it is unable to, simply any wifi. Following that, it will attempt to connect to the WebSocket that I have set up. Lastly, the WebSocket connection will remain open in order to listen for commands from the back-end, and to send sensor data from the esp32 which will collect and send it automatically.  
+
 ### AWS - WebSocket and Back-end
-The WebSocket is hosted on AWS API Gateway. I chose to use a WebSocket because having open communication seemed the simplest and most effective in this project. The back-end is hosted on AWS as a Lambda function. I have this function set up in order to receive data from the back-end and front-end and handle logic for each accordingly. 
+The WebSocket is hosted on AWS API Gateway. I chose to use a WebSocket because having open communication seemed the simplest and most effective in this project. The back-end is hosted on AWS as a Lambda function. I have this function set up in order to receive data from the back-end and front-end and handle logic for each accordingly.   
+
 #### Handling Connections
-When a new device joins the WebSocket connection, this function will take note of the new connection id and store it in a DynamoDB table. This is done to ensure some messages are not needlessly sent to the same connection id. 
+When a new device joins the WebSocket connection, this function will take note of the new connection id and store it in a DynamoDB table. This is done to ensure some messages are not needlessly sent to the same connection id.   
+
 #### Database
-The DynamoDB contains 2 tables: Connections and Vehicles. Connections are created and deleted at each connection and disconection and simply store the connection id. Vehicles is the table that will store all history about a particular ESP32. This table will contain fields to store sensor values, toggle modes, and history to be used later by the front-end. 
+The DynamoDB contains 2 tables: Connections and Vehicles. Connections are created and deleted at each connection and disconection and simply store the connection id. Vehicles is the table that will store all history about a particular ESP32. This table will contain fields to store sensor values, toggle modes, and history to be used later by the front-end.   
 
 #### Handling Messages
 On the first message that is sent, the Lambda function will check if a field 'devID' exists which indicates that an ESP32 sent the message, and see if that device exists in the database already. If it does not exist, a new Entry will be created for the corresponding 'devID'.   
@@ -113,6 +119,3 @@ There are many future plans I have to extend this project. I hope to add more fe
 
 # Conclusion
 My project focused on enhancing the cycling experience through the integration of advanced technologies and features. By incorporating automatic lights, GPS monitoring, and real-time data transmission, this project aims to improve safety and security for cyclists. Users can now enjoy a safer riding experience with enhanced visibility and real-time location tracking. The project successfully implemented sensor readings for temperature, humidity, and other environmental metrics. These readings, along with historical data stored in a database, enable efficient data collection and analysis, providing valuable insights for users. Through WebSocket communication and a user-friendly front-end interface, cyclists have access to real-time monitoring and visualization of sensor readings, graphical representations, and interactive maps. This enhances situational awareness and facilitates informed decision-making during rides. Overall, my project represents a step toward leveraging technology to improve the safety, convenience, and enjoyment for cyclists. 
-
-
-# References 
