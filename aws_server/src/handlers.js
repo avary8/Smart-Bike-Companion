@@ -70,6 +70,7 @@ const handle = async (event) => {
                                         'altitude': { S: 'nan'},
                                         'speed': {S: 'nan'}
                                     }},
+                                    'light': { N: 10000 },
                                     'temperature': { S: 'nan' },
                                     'humidity': { S: 'nan' },
                                     'heatIndex': { S: 'nan' },
@@ -203,12 +204,14 @@ const handleMessage = async (data) => {
     try {
         if (data?.type == 'output' && data?.deviceID){
             vals = await getValues(data);   
-            await handleMsg(data);
+            handleMsg(data);
             await handleESPdata(vals, data.deviceID.trim()); 
         } else if (data?.type == 'status'){
             //vals = await getValues(data);
             await getValues(data);
             //return vals;
+        } else if (data?.type == 'error') {
+            await getValues(data);
         } else {
             await frontEndHandleMessage(data);
         }
@@ -222,6 +225,13 @@ const handleMessage = async (data) => {
 
 
 const handleESPdata = async (data, id) => {
+    try {
+        await checkLights(data, id);
+    } catch (error) {
+        console.error('error checking lights', error);
+        return Error(error)
+    }
+
     try {
         const date = new Date();
         const params = {
@@ -245,6 +255,7 @@ const handleESPdata = async (data, id) => {
                           }
                     }
                 ]},
+                ':L': {N: data?.light?.val},
                 ':T': { S: data?.tempReading?.temp },
                 ':hum': { S: data?.tempReading?.humidity },
                 ':heat': { S: data?.tempReading?.heatIndex },
@@ -256,19 +267,12 @@ const handleESPdata = async (data, id) => {
                 }},
             },
             ReturnValues: 'ALL_NEW',
-            UpdateExpression: 'SET temperature = :T, humidity=:hum, heatIndex=:heat, #L=:loc , history=list_append(history, :temphist)'
+            UpdateExpression: 'SET light=:L, temperature = :T, humidity=:hum, heatIndex=:heat, #L=:loc , history=list_append(history, :temphist)'
         };
         await dynamodbClient.send(new client_dynamodb_1.UpdateItemCommand(params));
 
     } catch (error) {
         console.error(`error updating esp data: ${error}`);
-    }
-
-    try {
-        await checkLights(data, id);
-    } catch (error) {
-        console.error('error checking lights', error);
-        return Error(error)
     }
 };
 
@@ -285,7 +289,7 @@ const changeLight = async (id, val) => {
             }
         }
         await sendMsg(connectionId, msg);
-        return await handleMsg(msg);
+        await handleMsg(msg);
     } catch (error) {
         console.error('Websocket changing light:', error?.errMsg || error?.message || 'Websocket outgoing messages failed');
         throw error;
@@ -315,8 +319,8 @@ const checkLights = async(data, id) =>{
         const currentDate = new Date();
         const month = currentDate.getMonth()+1;
         const hour = currentDate.getHours();
-        var lightSensorVal = data?.light?.val || 100000;
-        
+        var lightSensorVal = vehicle?.Item?.light?.N || 100000;
+        console.log(`month: ${month}  Hour: ${hour}`);
         var sun = {};
         var darkOut = false;
         try {
@@ -388,27 +392,53 @@ const updateDB = async (data) => {
     if (data?.id && data?.body?.req && data?.body?.val !== undefined){
         const route = data.body.req;
         const value = data.body.val;
+        var msg;
         try {
-            // quick check
-            if (route === 'lightMode'){
-                await changeLight(data?.id, value);
-            } 
-            const params = {
-                TableName: 'Vehicles',
-                Key: {
-                    'vehicleID': {S: data.id}
-                },
-                ExpressionAttributeValues: {
-                    ':newAttribute': { BOOL: value }
-                },
-                ReturnValues: 'ALL_NEW',
-                UpdateExpression: `SET ${route} = :newAttribute`
-            }; 
-            await dynamodbClient.send(new client_dynamodb_1.UpdateItemCommand(params));
-            //const output = await dynamodbClient.send(new client_dynamodb_1.PutItemCommand(params));
-            var msg;
-            if (route == 'parkMode' && value === true){
+            if ((route !== 'parkMode') || (route === 'parkMode' && value === true)){
+                // quick check
+                if (route === 'lightMode'){
+                    await changeLight(data?.id, value);
+                } 
+                const params = {
+                    TableName: 'Vehicles',
+                    Key: {
+                        'vehicleID': {S: data.id}
+                    },
+                    ExpressionAttributeValues: {
+                        ':newAttribute': { BOOL: value }
+                    },
+                    ReturnValues: 'ALL_NEW',
+                    UpdateExpression: `SET ${route} = :newAttribute`
+                }; 
+                await dynamodbClient.send(new client_dynamodb_1.UpdateItemCommand(params));
+                //const output = await dynamodbClient.send(new client_dynamodb_1.PutItemCommand(params));
+                msg = {
+                    action: "msg", 
+                    id: data.id,
+                    type: data?.type,
+                    body: {
+                        req: data?.req,
+                        val: value
+                    }
+                } 
+            } else {
                 const vehicle = await getVehicle(data.id);
+                const params = {
+                    TableName: 'Vehicles',
+                    Key: {
+                        'vehicleID': {S: data.id}
+                    },
+                    ExpressionAttributeValues: {
+                        ':loc': { M: {
+                            'latitude': { S: vehicle?.gpsReading?.lat?.S || 'nan' },
+                            'longitude': { S: vehicle?.gpsReading?.long?.S || 'nan' }
+                        }},
+                        ':newAttribute': { BOOL: value }
+                    },
+                    ReturnValues: 'ALL_NEW',
+                    UpdateExpression: `SET ${route} = :newAttribute , 'parkedLocation =: loc`
+                }; 
+                await dynamodbClient.send(new client_dynamodb_1.UpdateItemCommand(params)); 
                 msg = {
                     action: "msg", 
                     id: data.id,
@@ -423,17 +453,7 @@ const updateDB = async (data) => {
                         }
                     }
                 }
-            } else {
-                msg = {
-                    action: "msg", 
-                    id: data.id,
-                    type: data?.type,
-                    body: {
-                        req: data?.req,
-                        val: value
-                    }
-                } 
-            }
+            } 
             sendMsg(connectionId, msg);
             
 

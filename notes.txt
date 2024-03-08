@@ -1,3 +1,41 @@
+many many hours before this
+Feb 21 - 14-18:20
+Feb 22 - 10-13:30 .. 15-2 am
+Feb 23 - 12(noon)-4 am
+Feb 24 - 18:30-21:30
+
+Feb 26 - 17-21
+Feb 27 - 12-12:30 .. 15-3 am
+Feb 28 - 16-3 am
+Feb 29 -  23-5:10 am .. 16-20
+March 1 - 19:40-5:10 am
+March 2 - 23-3:40 am
+
+March 4 - 22:30-6:30 am
+March 5 - 
+
+
+March 7 : 23-1 am 2am-7AM
+- working on final report and doc stuff
+
+
+everything needs to be pushed again.  3-5: 6 am
+handler needs to be zipped and uploaded again  3-5: 6 am
+
+i started the README.
+- clean up front end 
+- maybe deploy it ?
+
+DO NOT WORK MORE ON THIS, YOU NEED TO STUDY . DO NOT IMPLEMENT A LOG IN !!!
+STUDY FOR GRAPHICS TEST !!!!!
+(but i really want to ah) 
+
+22:30 - 6:30 AM march 5
+
+
+
+
+
 graphs look gorg. gotta work on parsing the data now and then depending on button, load correct data into graph . also adding the other historys in the database . and providing support in lambda function for them
 i fixed that stupid map too. had to import the css file from node_modules
 3/2 |11 pm - 3:30 am
@@ -17,12 +55,6 @@ rightnow: working on warning and alert box
 - prob just stop. i got other stuff to do
 
 stopped at 5:10 AM haha 
-
-
-
-
-
-
 
 
 

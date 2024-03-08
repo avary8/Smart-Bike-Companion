@@ -73,7 +73,7 @@ function App() {
 
   
   const graph = useRef('');
-  const history = useRef('[{"M":{"heatIndex":{"S":""},"date":{"S":""},"humidity":{"S":""},"altitude":{"S":""},"temp":{"S":""},"speed":{"S":""}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:00:55.891Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:01:10.935Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:01:25.879Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:01:40.959Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:01:55.887Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:02:10.884Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:02:25.872Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:02:40.894Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:02:55.875Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:03:10.896Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:03:25.873Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:03:40.873Z"},"humidity":{"S":"58"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:03:55.875Z"},"humidity":{"S":"57"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:04:10.877Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:04:28.215Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:04:43.202Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:04:58.207Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:05:29.655Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"70"},"date":{"S":"2024-03-05T05:05:44.642Z"},"humidity":{"S":"55"},"altitude":{"S":"nan"},"temp":{"S":"71"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:05:59.614Z"},"humidity":{"S":"55"},"altitude":{"S":"nan"},"temp":{"S":"70"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:06:14.631Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"70"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:06:29.644Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"70"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:06:44.604Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"70"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:06:59.606Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"70"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:07:14.618Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"70"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:07:29.619Z"},"humidity":{"S":"56"},"altitude":{"S":"nan"},"temp":{"S":"69"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:07:44.610Z"},"humidity":{"S":"57"},"altitude":{"S":"nan"},"temp":{"S":"69"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:07:59.619Z"},"humidity":{"S":"57"},"altitude":{"S":"nan"},"temp":{"S":"69"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:08:14.615Z"},"humidity":{"S":"57"},"altitude":{"S":"nan"},"temp":{"S":"69"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:08:29.624Z"},"humidity":{"S":"57"},"altitude":{"S":"nan"},"temp":{"S":"69"},"speed":{"S":"nan"}}},{"M":{"heatIndex":{"S":"69"},"date":{"S":"2024-03-05T05:08:44.617Z"},"humidity":{"S":"57"},"altitude":{"S":"nan"},"temp":{"S":"69"},"speed":{"S":"nan"}}}]');
+  const history = useRef('');
 
   const [userLoc, setUserLoc] = useState({});
   const [parkedLocation, setParkedLocation] = useState({ lat: "29.650789", long: "-82.346568" });
@@ -107,44 +107,44 @@ function App() {
   }
 */
 
-  // useEffect(() => {
-  //   if (lastMessage === null || !lastMessage?.data){
-  //     return;
-  //   }
-  //   var parsedMsg;
-  //   try {
-  //     parsedMsg = JSON.parse(lastMessage.data) as MessageBody;
-  //     console.log(parsedMsg);
-  //     // console.log('body: ')
-  //     // console.log(parsedMsg?.body)
-  //     // console.log('output: ')
-  //     // console.log(parsedMsg?.body?.output)
-  //     // console.log('temp: ')
-  //     // console.log(parsedMsg?.body?.output?.tempReading)
+  useEffect(() => {
+    if (lastMessage === null || !lastMessage?.data){
+      return;
+    }
+    var parsedMsg;
+    try {
+      parsedMsg = JSON.parse(lastMessage.data) as MessageBody;
+      console.log(parsedMsg);
+      // console.log('body: ')
+      // console.log(parsedMsg?.body)
+      // console.log('output: ')
+      // console.log(parsedMsg?.body?.output)
+      // console.log('temp: ')
+      // console.log(parsedMsg?.body?.output?.tempReading)
 
-  //   } catch (error){
-  //     console.error(`Error Parsing JSON: ${error}`);
-  //   }
-  //   const type = parsedMsg?.type;
-  //   const body = parsedMsg?.body;
-  //   switch (type){
-  //     case 'output':
-  //       if (body?.output?.gpsReading){
-  //         setSensorReading('gpsReading', body?.output?.gpsReading);
-  //       }
-  //       if (body?.output?.tempReading){
-  //         setSensorReading('tempReading', body?.output?.tempReading);
-  //       }
-  //       break;
-  //     case 'status':
-  //       break;
-  //     case 'set':
-  //     case 'get':
-  //       setSensorReading(body?.req, body?.value);
-  //       break;
-  //   }
+    } catch (error){
+      console.error(`Error Parsing JSON: ${error}`);
+    }
+    const type = parsedMsg?.type;
+    const body = parsedMsg?.body;
+    switch (type){
+      case 'output':
+        if (body?.output?.gpsReading){
+          setSensorReading('gpsReading', body?.output?.gpsReading);
+        }
+        if (body?.output?.tempReading){
+          setSensorReading('tempReading', body?.output?.tempReading);
+        }
+        break;
+      case 'status':
+        break;
+      case 'set':
+      case 'get':
+        setSensorReading(body?.req, body?.value);
+        break;
+    }
     
-  // }, [lastMessage]);
+  }, [lastMessage]);
 
 
 
@@ -173,25 +173,9 @@ function App() {
   }, [])
 
   // get all values when init
-  // useEffect(() => {
-  //   getSensorReading('getAll');
-  // }, []);
-
-
-  // uncomment when needed. this updates the light sensor value every x seconds
-  // useEffect(() => {
-  //   const interval = setInterval(async () => {
-  //     getSensorReading('TempReading');
-  //   }, 1800000); // every 30 minutes
-  //   return () => clearInterval(interval);
-  // }, []);
-
-  // useEffect(() => {
-  //   const interval = setInterval(async () => {
-  //     getSensorReading('gpsReading');
-  //   }, 180000); // every 3 minutes
-  //   return () => clearInterval(interval);
-  // }, []);
+  useEffect(() => {
+    getSensorReading('getAll');
+  }, []);
 
 
   const getSensorReading = async (route: string) => {
@@ -248,7 +232,11 @@ function App() {
         break;
       case 'getAll':
         Object.entries(payload).forEach(([key, value]) => {
-          console.log(key, value);
+          if (key === 'parkedLocation'){
+            if (value?.lat === 'nan') value.lat = parkedLocation.lat;
+            if (value?.long === 'nan') value.long = parkedLocation.long;
+            setParkedLocation(value);
+          }
           setSensorReading(key, value);
         });
         break;
@@ -256,7 +244,7 @@ function App() {
   });
 
   const checkPos = (() =>{
-    if (parkMode === false){
+    if (parkMode === false || Math.abs(parseFloat(userLoc?.lat) - parseFloat(parkedLocation?.lat)) < 0.000137 || Math.abs(parseFloat(userLoc?.long) - parseFloat(parkedLocation?.long)) < 0.000137 ){
       return;
     } 
 

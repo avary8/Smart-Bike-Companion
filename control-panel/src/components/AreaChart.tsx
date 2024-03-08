@@ -3,9 +3,12 @@ import { useState } from "react";
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 import { format } from 'date-fns';
 
+var interval;
+
 const AreaCharter = ({ data }: { data: { graph: string, history: string, graphInterval: number } }) => {
 
   const { graph, history, graphInterval } = data;
+  interval = graphInterval;
   var parsedHistory;
   var parsedData;
   var minValue = Infinity;
@@ -153,7 +156,20 @@ const AreaCharter = ({ data }: { data: { graph: string, history: string, graphIn
 
 const formatXAxisTick = (tickItem) => {
   const date = new Date(tickItem);
-  return format(date, 'MMM dd');
+  switch(interval){
+    case 0: 
+      return format(date, 'MMM dd');
+    case 1: // last 24 hours
+      return format(date, 'hh:mm');
+    case 2: // last 7 days
+      return format(date, 'MMM dd');
+    case 3: // last month
+      return format(date, 'MMM dd');
+    case 4: // last 6 months
+      return format(date, 'MMM yy');
+    case 5: // last year
+      return format(date, 'MM-dd-yy');
+  }
 };  
 
 
