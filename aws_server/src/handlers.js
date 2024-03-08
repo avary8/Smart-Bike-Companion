@@ -203,9 +203,11 @@ const handleMessage = async (data) => {
     var vals;
     try {
         if (data?.type == 'output' && data?.deviceID){
-            vals = await getValues(data);   
-            handleMsg(data);
-            await handleESPdata(vals, data.deviceID.trim()); 
+            vals = await getValues(data);
+            await Promise.all([
+                handleMsg(data),
+                handleESPdata(vals, data.deviceID.trim())
+            ]);
         } else if (data?.type == 'status'){
             //vals = await getValues(data);
             await getValues(data);
@@ -288,8 +290,10 @@ const changeLight = async (id, val) => {
                 value: val
             }
         }
-        await sendMsg(connectionId, msg);
-        await handleMsg(msg);
+        await Promise.all([
+            sendMsg(connectionId, msg),
+            handleMsg(msg)
+        ]) 
     } catch (error) {
         console.error('Websocket changing light:', error?.errMsg || error?.message || 'Websocket outgoing messages failed');
         throw error;
@@ -318,9 +322,9 @@ const checkLights = async(data, id) =>{
     } else {
         const currentDate = new Date();
         const month = currentDate.getMonth()+1;
-        const hour = currentDate.getHours();
+        const options = { timeZone: 'America/New_York', hour12: false };
+        const hour = currentDate.toLocaleString('en-US', options).split(',')[1].trim().split(':')[0];
         var lightSensorVal = vehicle?.Item?.light?.N || 100000;
-        console.log(`month: ${month}  Hour: ${hour}`);
         var sun = {};
         var darkOut = false;
         try {
@@ -374,10 +378,10 @@ const frontEndHandleMessage = async (data) => {
             }
             switch (data?.type){
                 case 'set': 
-                    updateDB(data);
+                    await updateDB(data);
                     break;
                 case 'get':
-                    retrieveDB(data);
+                    await retrieveDB(data);
                     break;
             }
         }
@@ -454,7 +458,7 @@ const updateDB = async (data) => {
                     }
                 }
             } 
-            sendMsg(connectionId, msg);
+            await sendMsg(connectionId, msg);
             
 
             if (route === 'autoMode'){
@@ -539,8 +543,10 @@ const getAll = async (vehicle, data) => {
     }   
 
     try {
-        await sendMsg(connectionId, msg);
-        await checkLights(data, data.id);
+        await Promise.all([
+            sendMsg(connectionId, msg),
+            checkLights(data, data.id)
+        ])
     } catch (error){
         console.error(`error checking lights: ${error}`);
         return Error(error);

@@ -22,6 +22,7 @@ const AreaCharter = ({ data }: { data: { graph: string, history: string, graphIn
       maxValue = value;
     }
   }
+  console.log(history);
 
   const endDate = new Date();
   var startDate = new Date(endDate);;

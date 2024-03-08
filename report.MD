@@ -102,8 +102,7 @@ The front-end is also responsible for keeping track of a user's location and the
 
 
 # Results and Evaluation
-Utilizing Amazon Cloudwatch, I was able to get important logging messages to ensure my code and sensors were acting accordingly. Accurate readings were an important part of this project; therefore, I needed to ensure all sensors were accurate. While testing, I discovered that my original TMP36 sensor was not accurate and bought a new DHT11 sensor. This upgrade not only ensured accuracy but also provides humidity and heat index readings. I also tested the photoresistors under different light conditions to monitor what the readings typically were to gauge when the automatic lights should be switched on.
-
+Utilizing Amazon Cloudwatch, I was able to get important logging messages to ensure my code and sensors were acting accordingly. Accurate readings were an important part of this project; therefore, I needed to ensure all sensors were accurate. While testing, I discovered that my original TMP36 sensor was not accurate and bought a new DHT11 sensor. This upgrade not only ensured accuracy but also provides humidity and heat index readings. I also tested the photoresistors under different light conditions to monitor what the readings typically were to gauge when the automatic lights should be switched on. Another issue I noticed was a long delay between toggling manual lights and the lights actually turning on. The delay was around 3 seconds which is a pretty long pause for something very simple. I was able to look through my back-end handler function and fix the issue.
 
 
 # Challenges Faced

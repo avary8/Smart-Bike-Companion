@@ -228,7 +228,7 @@ function App() {
         }
         break;
       case 'history': 
-        history.current = payload.history;
+        history.current = payload;
         break;
       case 'getAll':
         Object.entries(payload).forEach(([key, value]) => {
