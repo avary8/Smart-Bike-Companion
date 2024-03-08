@@ -332,7 +332,7 @@ void loop() {
 
   unsigned long currentTime = millis();  // Get the current time
 
-  if (currentTime - lastGetAllTime >= 15000) {
+  if (currentTime - lastGetAllTime >= 2000) { // 15000 = 15 seconds
       getAll();
       lastGetAllTime = currentTime;  
   }

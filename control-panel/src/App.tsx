@@ -53,8 +53,8 @@ const Route = "http://localhost:3500"
 function App() {
   const { readyState, lastMessage, sendMessage, sendJsonMessage } = useWebSocket(import.meta.env.VITE_WEBSOCKET_ADDRESS);
 
-  const [tempReading, setTempReading] = useState({ temp: "67", humidity: "57", heatIndex: "66" });
-  const [GPSReading, setGPSReading] = useState({ lat: "29.650789", long: "-82.346568", alt: 'nan', speed: 'nan' });
+  const [tempReading, setTempReading] = useState({ temp: "nan", humidity: "nan", heatIndex: "nan" });
+  const [GPSReading, setGPSReading] = useState({ lat: "nan", long: "nan", alt: 'nan', speed: 'nan' });
 
   const [parkMode, setParkMode] = useState(true);
   const [autoLightMode, setAutoLightMode] = useState(false);
@@ -76,7 +76,7 @@ function App() {
   const history = useRef('');
 
   const [userLoc, setUserLoc] = useState({});
-  const [parkedLocation, setParkedLocation] = useState({ lat: "29.650789", long: "-82.346568" });
+  const [parkedLocation, setParkedLocation] = useState({ lat: "nan", long: "nan" });
 
 
 
@@ -320,16 +320,16 @@ function App() {
   };
 
 
-  // manual testing
-  const change = (val: any) => {
-    setGPSReading({
-      lat: `${parseFloat(GPSReading.lat) + val}`,
-      long: GPSReading.long,
-      alt: GPSReading.alt,
-      speed: GPSReading.speed
-    });
-    checkPos();
-  }
+  // // manual testing
+  // const change = (val: any) => {
+  //   setGPSReading({
+  //     lat: `${parseFloat(GPSReading.lat) + val}`,
+  //     long: GPSReading.long,
+  //     alt: GPSReading.alt,
+  //     speed: GPSReading.speed
+  //   });
+  //   checkPos();
+  // }
 
   return (
     // orig gradient scheme: 'linear-gradient(to bottom, #3b1f5b, #192841)'
@@ -402,9 +402,9 @@ function App() {
         fontSize: '20vw', 
         color: 'rgb(176, 176, 176)' }} className='moving-icon'/>
 
-      {/* MANUAL TESTING */}
+    {/* MANUAL TESTING */}
 
-      <Button onClick={() => change(0.00004)}>up</Button>
+      {/* <Button onClick={() => change(0.00004)}>up</Button>
       <Button onClick={() => change(-0.01004)}>down</Button>
 
       lat: {GPSReading.lat} long: {GPSReading.long}
@@ -413,9 +413,9 @@ function App() {
 
       <br/>
 
-      {JSON.stringify(userLoc)}
+      {JSON.stringify(userLoc)} */}
 
-      {/* end of testing code */}
+    {/* end of testing code */}
 
       {/* fix this and add alert box too*/}
       {warning && 

@@ -494,7 +494,7 @@ const retrieveDB = async (data) => {
         const vehicle = await getVehicle(data.id);
         const route = data.body.req;
         if (route === 'getAll'){
-            return getAll(vehicle, data);
+            return await getAll(vehicle, data);
         }
         const val = vehicle?.Item[route];
         const msg = {
@@ -544,8 +544,7 @@ const getAll = async (vehicle, data) => {
 
     try {
         await Promise.all([
-            sendMsg(connectionId, msg),
-            checkLights(data, data.id)
+            sendMsg(connectionId, msg)
         ])
     } catch (error){
         console.error(`error checking lights: ${error}`);

@@ -65,7 +65,7 @@ const Map: React.FC<Props> = ({ vehicle }) => {
   }, []);
 
   useEffect(() => {
-    if (mapInitialized && mapInstanceRef.current && vehicle?.lat && vehicle?.long) {
+    if (mapInitialized && mapInstanceRef.current && vehicle?.lat !== 'nan' && vehicle?.long !== 'nan') {
       new maplibregl.Marker()
         .setLngLat([parseFloat(vehicle.long), parseFloat(vehicle.lat)])
         .addTo(mapInstanceRef.current);
